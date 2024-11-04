@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: ["develop"]
-  pull_request: {}
-  workflow_dispatch: {}
+    branches: [ "develop" ]
+  pull_request: { }
+  workflow_dispatch: { }
 
 permissions:
   actions: read
@@ -32,6 +32,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/cleanup
+      - uses: rui314/setup-mold@v1
+      - uses: ./.github/actions/setup-rust
       - uses: spiraldb/actions/.github/actions/setup-uv@0.2.0
 
       - name: Pytest - PyVortex
@@ -65,10 +68,9 @@ jobs:
     name: "Build (default)"
     runs-on: ubuntu-latest
     steps:
-      # setup mold linker
-      - uses: rui314/setup-mold@v1
       - uses: actions/checkout@v4
       - uses: ./.github/actions/cleanup
+      - uses: rui314/setup-mold@v1
       - uses: ./.github/actions/setup-rust
       - name: Rust Build (Default features)
         run: cargo build --all-targets
@@ -77,9 +79,9 @@ jobs:
     name: "Build (all-features)"
     runs-on: ubuntu-latest
     steps:
-      - uses: rui314/setup-mold@v1
       - uses: actions/checkout@v4
       - uses: ./.github/actions/cleanup
+      - uses: rui314/setup-mold@v1
       - uses: ./.github/actions/setup-rust
       - name: Rust Build (All Features)
         run: cargo build --all-features --all-targets
@@ -88,8 +90,10 @@ jobs:
     name: "Rust (tests)"
     runs-on: ubuntu-latest
     steps:
-      - uses: rui314/setup-mold@v1
       - uses: actions/checkout@v4
+      - uses: ./.github/actions/cleanup
+      - uses: rui314/setup-mold@v1
+      - uses: ./.github/actions/setup-rust
       - name: Rust Lint - Format
         run: cargo fmt --all --check
       - name: Rust Lint - Clippy
@@ -125,9 +129,9 @@ jobs:
     name: "bench test"
     runs-on: ubuntu-latest
     steps:
-      - uses: rui314/setup-mold@v1
       - uses: actions/checkout@v4
       - uses: ./.github/actions/cleanup
+      - uses: rui314/setup-mold@v1
       - uses: ./.github/actions/setup-rust
       - uses: spiraldb/actions/.github/actions/setup-uv@0.2.0
       # Required to run benchmarks
@@ -142,9 +146,9 @@ jobs:
     name: "Check generated proto/fbs files are up to date"
     runs-on: ubuntu-latest
     steps:
-      - uses: rui314/setup-mold@v1
       - uses: actions/checkout@v4
       - uses: ./.github/actions/cleanup
+      - uses: rui314/setup-mold@v1
       - uses: ./.github/actions/setup-rust
       - uses: ./.github/actions/setup-flatc
       - name: Install Protoc
