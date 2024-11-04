@@ -2,9 +2,9 @@ use std::{io, mem};
 
 use flatbuffers::FlatBufferBuilder;
 use futures::TryStreamExt;
-use vortex::array::{ChunkedArray, StructArray};
-use vortex::stream::ArrayStream;
-use vortex::{Array, ArrayDType as _};
+use vortex_array::array::{ChunkedArray, StructArray};
+use vortex_array::stream::ArrayStream;
+use vortex_array::{Array, ArrayDType as _};
 use vortex_buffer::io_buf::IoBuf;
 use vortex_dtype::DType;
 use vortex_error::{vortex_bail, vortex_err, VortexExpect as _, VortexResult};
@@ -272,9 +272,9 @@ impl ColumnWriter {
 mod tests {
     use flatbuffers::FlatBufferBuilder;
     use futures_executor::block_on;
-    use vortex::array::{PrimitiveArray, StructArray, VarBinArray};
-    use vortex::validity::Validity;
-    use vortex::IntoArray;
+    use vortex_array::array::{PrimitiveArray, StructArray, VarBinArray};
+    use vortex_array::validity::Validity;
+    use vortex_array::IntoArray;
     use vortex_flatbuffers::WriteFlatBuffer;
 
     use crate::layouts::write::footer::Postscript;

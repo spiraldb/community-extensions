@@ -1,5 +1,5 @@
 use pyo3::prelude::*;
-use vortex_sampling_compressor::SamplingCompressor;
+use vortex::sampling_compressor::SamplingCompressor;
 
 use crate::array::PyArray;
 

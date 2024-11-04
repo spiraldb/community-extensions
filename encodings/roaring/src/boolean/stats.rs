@@ -1,6 +1,6 @@
 use croaring::Bitset;
-use vortex::aliases::hash_map::HashMap;
-use vortex::stats::{ArrayStatisticsCompute, Stat, StatsSet};
+use vortex_array::aliases::hash_map::HashMap;
+use vortex_array::stats::{ArrayStatisticsCompute, Stat, StatsSet};
 use vortex_error::{vortex_err, VortexResult};
 
 use crate::RoaringBoolArray;
@@ -93,9 +93,9 @@ impl RoaringBoolStatsAccumulator {
 
 #[cfg(test)]
 mod test {
-    use vortex::array::BoolArray;
-    use vortex::stats::ArrayStatistics;
-    use vortex::IntoArray;
+    use vortex_array::array::BoolArray;
+    use vortex_array::stats::ArrayStatistics;
+    use vortex_array::IntoArray;
 
     use crate::RoaringBoolArray;
 

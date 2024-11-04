@@ -11,10 +11,10 @@ use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 use tokio::runtime::Runtime;
 use vortex::array::ChunkedArray;
 use vortex::arrow::FromArrowType;
+use vortex::dtype::DType;
+use vortex::error::{VortexError, VortexResult};
+use vortex::serde::stream_writer::StreamArrayWriter;
 use vortex::{Array, IntoArray};
-use vortex_dtype::DType;
-use vortex_error::{VortexError, VortexResult};
-use vortex_serde::stream_writer::StreamArrayWriter;
 
 use crate::idempotent;
 use crate::reader::BATCH_SIZE;

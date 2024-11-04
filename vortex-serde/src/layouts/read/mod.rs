@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 use std::fmt::Debug;
 use std::sync::Arc;
 
-use vortex::Array;
+use vortex_array::Array;
 use vortex_error::VortexResult;
 
 mod batch;

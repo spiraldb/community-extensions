@@ -4,9 +4,9 @@ use pyo3::prelude::*;
 use pyo3::pyfunction;
 use pyo3::types::PyString;
 use tokio::fs::File;
+use vortex::sampling_compressor::SamplingCompressor;
+use vortex::serde::layouts::LayoutWriter;
 use vortex::Array;
-use vortex_sampling_compressor::SamplingCompressor;
-use vortex_serde::layouts::LayoutWriter;
 
 use crate::dataset::{ObjectStoreUrlDataset, TokioFileDataset};
 use crate::expr::PyExpr;

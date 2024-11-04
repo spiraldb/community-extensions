@@ -3,10 +3,10 @@ use std::os::unix::prelude::MetadataExt;
 use std::path::PathBuf;
 
 use vortex::array::{ChunkedArray, StructArray};
+use vortex::dtype::DType;
+use vortex::error::VortexResult;
 use vortex::variants::StructArrayTrait;
 use vortex::ArrayDType;
-use vortex_dtype::DType;
-use vortex_error::VortexResult;
 
 use crate::data_downloads::FileType;
 use crate::reader::open_vortex;

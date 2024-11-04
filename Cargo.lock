@@ -501,25 +501,8 @@ dependencies = [
  "tar",
  "tokio",
  "uuid",
- "vortex-alp",
- "vortex-array",
- "vortex-buffer",
- "vortex-bytebool",
+ "vortex-all",
  "vortex-datafusion",
- "vortex-datetime-dtype",
- "vortex-datetime-parts",
- "vortex-dict",
- "vortex-dtype",
- "vortex-error",
- "vortex-fastlanes",
- "vortex-fsst",
- "vortex-roaring",
- "vortex-runend",
- "vortex-runend-bool",
- "vortex-sampling-compressor",
- "vortex-scalar",
- "vortex-serde",
- "vortex-zigzag",
  "xshell",
 ]
 
@@ -3294,24 +3277,7 @@ dependencies = [
  "pyo3-log",
  "tokio",
  "url",
- "vortex-alp",
- "vortex-array",
- "vortex-buffer",
- "vortex-bytebool",
- "vortex-datetime-parts",
- "vortex-dict",
- "vortex-dtype",
- "vortex-error",
- "vortex-expr",
- "vortex-fastlanes",
- "vortex-fsst",
- "vortex-roaring",
- "vortex-runend",
- "vortex-runend-bool",
- "vortex-sampling-compressor",
- "vortex-scalar",
- "vortex-serde",
- "vortex-zigzag",
+ "vortex-all",
 ]
 
 [[package]]
@@ -4451,6 +4417,34 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
+
+[[package]]
+name = "vortex-all"
+version = "0.13.1"
+dependencies = [
+ "vortex-alp",
+ "vortex-array",
+ "vortex-buffer",
+ "vortex-bytebool",
+ "vortex-datetime-dtype",
+ "vortex-datetime-parts",
+ "vortex-dict",
+ "vortex-dtype",
+ "vortex-error",
+ "vortex-expr",
+ "vortex-fastlanes",
+ "vortex-flatbuffers",
+ "vortex-fsst",
+ "vortex-proto",
+ "vortex-roaring",
+ "vortex-runend",
+ "vortex-runend-bool",
+ "vortex-sampling-compressor",
+ "vortex-scalar",
+ "vortex-schema",
+ "vortex-serde",
+ "vortex-zigzag",
+]
 
 [[package]]
 name = "vortex-alp"

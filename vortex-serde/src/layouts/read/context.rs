@@ -2,8 +2,8 @@ use std::fmt::{Debug, Display, Formatter};
 use std::sync::Arc;
 
 use bytes::Bytes;
-use vortex::aliases::hash_map::HashMap;
-use vortex::Context;
+use vortex_array::aliases::hash_map::HashMap;
+use vortex_array::Context;
 use vortex_error::{vortex_err, VortexResult};
 use vortex_flatbuffers::footer as fb;
 

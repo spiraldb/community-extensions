@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use bytes::Bytes;
-use vortex::{Array, Context};
+use vortex_array::{Array, Context};
 use vortex_error::{vortex_bail, VortexResult};
 use vortex_flatbuffers::footer;
 
@@ -123,8 +123,8 @@ mod tests {
     use std::sync::{Arc, RwLock};
 
     use bytes::Bytes;
-    use vortex::array::PrimitiveArray;
-    use vortex::{Context, IntoArray, IntoArrayVariant};
+    use vortex_array::array::PrimitiveArray;
+    use vortex_array::{Context, IntoArray, IntoArrayVariant};
     use vortex_dtype::PType;
     use vortex_expr::{BinaryExpr, Identity, Literal, Operator};
 

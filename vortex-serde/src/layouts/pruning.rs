@@ -3,8 +3,8 @@
 
 use std::sync::Arc;
 
-use vortex::aliases::hash_map::{Entry, HashMap};
-use vortex::stats::Stat;
+use vortex_array::aliases::hash_map::{Entry, HashMap};
+use vortex_array::stats::Stat;
 use vortex_dtype::field::Field;
 use vortex_dtype::Nullability;
 use vortex_expr::{BinaryExpr, Column, Literal, Operator, VortexExpr};
@@ -221,8 +221,8 @@ fn stat_column_name(field: &Field, stat: Stat) -> Field {
 mod tests {
     use std::sync::Arc;
 
-    use vortex::aliases::hash_map::HashMap;
-    use vortex::stats::Stat;
+    use vortex_array::aliases::hash_map::HashMap;
+    use vortex_array::stats::Stat;
     use vortex_dtype::field::Field;
     use vortex_expr::{BinaryExpr, Column, Literal, Operator, VortexExpr};
 

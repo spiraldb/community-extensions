@@ -3,12 +3,12 @@ use std::fmt::Debug;
 use std::sync::Arc;
 
 use arrow_buffer::BooleanBuffer;
-use vortex::aliases::hash_set::HashSet;
-use vortex::array::{BoolArray, ConstantArray};
-use vortex::compute::and;
-use vortex::stats::ArrayStatistics;
-use vortex::validity::Validity;
-use vortex::{Array, IntoArray, IntoArrayVariant};
+use vortex_array::aliases::hash_set::HashSet;
+use vortex_array::array::{BoolArray, ConstantArray};
+use vortex_array::compute::and;
+use vortex_array::stats::ArrayStatistics;
+use vortex_array::validity::Validity;
+use vortex_array::{Array, IntoArray, IntoArrayVariant};
 use vortex_dtype::field::Field;
 use vortex_error::{VortexExpect, VortexResult};
 use vortex_expr::{split_conjunction, unbox_any, VortexExpr};
@@ -112,9 +112,9 @@ pub fn null_as_false(array: BoolArray) -> VortexResult<Array> {
 
 #[cfg(test)]
 mod tests {
-    use vortex::array::BoolArray;
-    use vortex::validity::Validity;
-    use vortex::IntoArrayVariant;
+    use vortex_array::array::BoolArray;
+    use vortex_array::validity::Validity;
+    use vortex_array::IntoArrayVariant;
 
     use super::*;
 

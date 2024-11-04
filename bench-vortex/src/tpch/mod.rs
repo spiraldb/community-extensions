@@ -14,14 +14,14 @@ use tokio::fs::OpenOptions;
 use vortex::aliases::hash_map::HashMap;
 use vortex::array::{ChunkedArray, StructArray};
 use vortex::arrow::FromArrowArray;
+use vortex::dtype::DType;
+use vortex::sampling_compressor::SamplingCompressor;
+use vortex::serde::layouts::LayoutWriter;
 use vortex::variants::StructArrayTrait;
 use vortex::{Array, ArrayDType, IntoArray, IntoArrayVariant};
 use vortex_datafusion::memory::VortexMemTableOptions;
 use vortex_datafusion::persistent::config::{VortexFile, VortexTableOptions};
 use vortex_datafusion::SessionContextExt;
-use vortex_dtype::DType;
-use vortex_sampling_compressor::SamplingCompressor;
-use vortex_serde::layouts::LayoutWriter;
 
 use crate::{idempotent_async, CTX};
 

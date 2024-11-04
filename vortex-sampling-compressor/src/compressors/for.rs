@@ -1,9 +1,9 @@
-use vortex::aliases::hash_set::HashSet;
-use vortex::array::PrimitiveArray;
-use vortex::encoding::EncodingRef;
-use vortex::stats::{trailing_zeros, ArrayStatistics};
-use vortex::validity::ArrayValidity;
-use vortex::{Array, ArrayDef, IntoArray, IntoArrayVariant};
+use vortex_array::aliases::hash_set::HashSet;
+use vortex_array::array::PrimitiveArray;
+use vortex_array::encoding::EncodingRef;
+use vortex_array::stats::{trailing_zeros, ArrayStatistics};
+use vortex_array::validity::ArrayValidity;
+use vortex_array::{Array, ArrayDef, IntoArray, IntoArrayVariant};
 use vortex_dtype::match_each_integer_ptype;
 use vortex_error::VortexResult;
 use vortex_fastlanes::{for_compress, FoR, FoRArray, FoREncoding};

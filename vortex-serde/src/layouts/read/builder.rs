@@ -1,6 +1,6 @@
 use std::sync::{Arc, RwLock};
 
-use vortex::{Array, ArrayDType};
+use vortex_array::{Array, ArrayDType};
 use vortex_error::VortexResult;
 use vortex_expr::Select;
 use vortex_schema::projection::Projection;

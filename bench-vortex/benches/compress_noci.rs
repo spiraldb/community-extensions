@@ -23,12 +23,14 @@ use parquet::file::properties::WriterProperties;
 use regex::Regex;
 use tokio::runtime::Runtime;
 use vortex::array::{ChunkedArray, StructArray};
+use vortex::dtype::field::Field;
+use vortex::error::VortexResult;
+use vortex::sampling_compressor::compressors::fsst::FSSTCompressor;
+use vortex::sampling_compressor::{SamplingCompressor, ALL_COMPRESSORS_CONTEXT};
+use vortex::serde::layouts::{
+    LayoutContext, LayoutDeserializer, LayoutReaderBuilder, LayoutWriter,
+};
 use vortex::{Array, ArrayDType, IntoArray, IntoCanonical};
-use vortex_dtype::field::Field;
-use vortex_error::VortexResult;
-use vortex_sampling_compressor::compressors::fsst::FSSTCompressor;
-use vortex_sampling_compressor::{SamplingCompressor, ALL_COMPRESSORS_CONTEXT};
-use vortex_serde::layouts::{LayoutContext, LayoutDeserializer, LayoutReaderBuilder, LayoutWriter};
 
 use crate::tokio_runtime::TOKIO_RUNTIME;
 

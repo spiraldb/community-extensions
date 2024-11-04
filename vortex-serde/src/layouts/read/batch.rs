@@ -2,10 +2,10 @@ use std::collections::BTreeSet;
 use std::mem;
 use std::sync::Arc;
 
-use vortex::array::StructArray;
-use vortex::stats::ArrayStatistics;
-use vortex::validity::Validity;
-use vortex::{Array, IntoArray};
+use vortex_array::array::StructArray;
+use vortex_array::stats::ArrayStatistics;
+use vortex_array::validity::Validity;
+use vortex_array::{Array, IntoArray};
 use vortex_dtype::FieldNames;
 use vortex_error::{vortex_err, VortexExpect, VortexResult};
 use vortex_expr::VortexExpr;

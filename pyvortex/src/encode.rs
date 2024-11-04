@@ -7,9 +7,9 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use vortex::array::ChunkedArray;
 use vortex::arrow::{FromArrowArray, FromArrowType};
+use vortex::dtype::DType;
+use vortex::error::{VortexError, VortexResult};
 use vortex::{Array, IntoArray};
-use vortex_dtype::DType;
-use vortex_error::{VortexError, VortexResult};
 
 use crate::array::PyArray;
 

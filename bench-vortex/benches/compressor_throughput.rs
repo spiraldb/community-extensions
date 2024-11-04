@@ -5,22 +5,22 @@ use rand::{Rng, SeedableRng as _};
 use vortex::aliases::hash_set::HashSet;
 use vortex::array::PrimitiveArray;
 use vortex::compute::unary::try_cast;
-use vortex::validity::Validity;
-use vortex::{IntoArray as _, IntoCanonical};
-use vortex_dtype::PType;
-use vortex_sampling_compressor::compressors::alp::ALPCompressor;
-use vortex_sampling_compressor::compressors::alp_rd::ALPRDCompressor;
-use vortex_sampling_compressor::compressors::bitpacked::{
+use vortex::dtype::PType;
+use vortex::sampling_compressor::compressors::alp::ALPCompressor;
+use vortex::sampling_compressor::compressors::alp_rd::ALPRDCompressor;
+use vortex::sampling_compressor::compressors::bitpacked::{
     BITPACK_NO_PATCHES, BITPACK_WITH_PATCHES,
 };
-use vortex_sampling_compressor::compressors::delta::DeltaCompressor;
-use vortex_sampling_compressor::compressors::dict::DictCompressor;
-use vortex_sampling_compressor::compressors::r#for::FoRCompressor;
-use vortex_sampling_compressor::compressors::roaring_int::RoaringIntCompressor;
-use vortex_sampling_compressor::compressors::runend::DEFAULT_RUN_END_COMPRESSOR;
-use vortex_sampling_compressor::compressors::zigzag::ZigZagCompressor;
-use vortex_sampling_compressor::compressors::CompressorRef;
-use vortex_sampling_compressor::SamplingCompressor;
+use vortex::sampling_compressor::compressors::delta::DeltaCompressor;
+use vortex::sampling_compressor::compressors::dict::DictCompressor;
+use vortex::sampling_compressor::compressors::r#for::FoRCompressor;
+use vortex::sampling_compressor::compressors::roaring_int::RoaringIntCompressor;
+use vortex::sampling_compressor::compressors::runend::DEFAULT_RUN_END_COMPRESSOR;
+use vortex::sampling_compressor::compressors::zigzag::ZigZagCompressor;
+use vortex::sampling_compressor::compressors::CompressorRef;
+use vortex::sampling_compressor::SamplingCompressor;
+use vortex::validity::Validity;
+use vortex::{IntoArray as _, IntoCanonical};
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;

@@ -1,8 +1,10 @@
-use vortex::aliases::hash_set::HashSet;
-use vortex::array::{Primitive, PrimitiveArray, VarBin, VarBinArray, VarBinView, VarBinViewArray};
-use vortex::encoding::EncodingRef;
-use vortex::stats::ArrayStatistics;
-use vortex::{Array, ArrayDef, IntoArray};
+use vortex_array::aliases::hash_set::HashSet;
+use vortex_array::array::{
+    Primitive, PrimitiveArray, VarBin, VarBinArray, VarBinView, VarBinViewArray,
+};
+use vortex_array::encoding::EncodingRef;
+use vortex_array::stats::ArrayStatistics;
+use vortex_array::{Array, ArrayDef, IntoArray};
 use vortex_dict::{
     dict_encode_primitive, dict_encode_varbin, dict_encode_varbinview, Dict, DictArray,
     DictEncoding,

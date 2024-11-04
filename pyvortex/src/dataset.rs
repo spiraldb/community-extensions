@@ -9,16 +9,16 @@ use pyo3::prelude::*;
 use pyo3::types::{PyLong, PyString};
 use tokio::fs::File;
 use vortex::arrow::infer_schema;
-use vortex::Array;
-use vortex_dtype::field::Field;
-use vortex_dtype::DType;
-use vortex_error::VortexResult;
-use vortex_sampling_compressor::ALL_COMPRESSORS_CONTEXT;
-use vortex_serde::io::{ObjectStoreReadAt, VortexReadAt};
-use vortex_serde::layouts::{
+use vortex::dtype::field::Field;
+use vortex::dtype::DType;
+use vortex::error::VortexResult;
+use vortex::sampling_compressor::ALL_COMPRESSORS_CONTEXT;
+use vortex::serde::io::{ObjectStoreReadAt, VortexReadAt};
+use vortex::serde::layouts::{
     LayoutBatchStream, LayoutContext, LayoutDescriptorReader, LayoutDeserializer,
     LayoutReaderBuilder, Projection, RowFilter, VortexRecordBatchReader,
 };
+use vortex::Array;
 
 use crate::expr::PyExpr;
 use crate::object_store_urls::vortex_read_at_from_url;

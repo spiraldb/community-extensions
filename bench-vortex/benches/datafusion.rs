@@ -14,17 +14,17 @@ use datafusion::prelude::{col, DataFrame, SessionContext};
 use lazy_static::lazy_static;
 use vortex::aliases::hash_set::HashSet;
 use vortex::compress::CompressionStrategy;
+use vortex::dict::DictEncoding;
 use vortex::encoding::EncodingRef;
+use vortex::fastlanes::{BitPackedEncoding, DeltaEncoding, FoREncoding};
+use vortex::sampling_compressor::compressors::bitpacked::BITPACK_WITH_PATCHES;
+use vortex::sampling_compressor::compressors::delta::DeltaCompressor;
+use vortex::sampling_compressor::compressors::dict::DictCompressor;
+use vortex::sampling_compressor::compressors::r#for::FoRCompressor;
+use vortex::sampling_compressor::compressors::CompressorRef;
+use vortex::sampling_compressor::SamplingCompressor;
 use vortex::{Array, Context};
 use vortex_datafusion::memory::{VortexMemTable, VortexMemTableOptions};
-use vortex_dict::DictEncoding;
-use vortex_fastlanes::{BitPackedEncoding, DeltaEncoding, FoREncoding};
-use vortex_sampling_compressor::compressors::bitpacked::BITPACK_WITH_PATCHES;
-use vortex_sampling_compressor::compressors::delta::DeltaCompressor;
-use vortex_sampling_compressor::compressors::dict::DictCompressor;
-use vortex_sampling_compressor::compressors::r#for::FoRCompressor;
-use vortex_sampling_compressor::compressors::CompressorRef;
-use vortex_sampling_compressor::SamplingCompressor;
 
 lazy_static! {
     pub static ref CTX: Context = Context::default().with_encodings([

@@ -2,10 +2,10 @@ use std::any::Any;
 use std::sync::Arc;
 
 use log::warn;
-use vortex::aliases::hash_set::HashSet;
-use vortex::array::{Chunked, ChunkedArray};
-use vortex::encoding::EncodingRef;
-use vortex::{Array, ArrayDType, ArrayDef, IntoArray};
+use vortex_array::aliases::hash_set::HashSet;
+use vortex_array::array::{Chunked, ChunkedArray};
+use vortex_array::encoding::EncodingRef;
+use vortex_array::{Array, ArrayDType, ArrayDef, IntoArray};
 use vortex_error::{vortex_bail, VortexResult};
 
 use super::EncoderMetadata;

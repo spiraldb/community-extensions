@@ -1,5 +1,5 @@
-use vortex::aliases::hash_map::HashMap;
-use vortex::stats::{ArrayStatistics, ArrayStatisticsCompute, Stat, StatsSet};
+use vortex_array::aliases::hash_map::HashMap;
+use vortex_array::stats::{ArrayStatistics, ArrayStatisticsCompute, Stat, StatsSet};
 use vortex_error::VortexResult;
 use vortex_scalar::Scalar;
 

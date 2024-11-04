@@ -11,8 +11,8 @@ use reqwest::Url;
 use tokio::fs::File;
 use vortex::aliases::hash_map::HashMap;
 use vortex::array::ChunkedArray;
+use vortex::error::VortexResult;
 use vortex::{Array, ArrayDType, ArrayTrait, IntoArray};
-use vortex_error::VortexResult;
 
 use crate::data_downloads::{decompress_bz2, download_data, BenchmarkDataset, FileType};
 use crate::public_bi_data::PBIDataset::*;

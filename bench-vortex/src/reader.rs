@@ -25,18 +25,18 @@ use stream::StreamExt;
 use vortex::aliases::hash_map::HashMap;
 use vortex::array::{ChunkedArray, PrimitiveArray};
 use vortex::arrow::FromArrowType;
+use vortex::buffer::Buffer;
 use vortex::compress::CompressionStrategy;
+use vortex::dtype::DType;
+use vortex::error::{vortex_err, VortexResult};
+use vortex::sampling_compressor::SamplingCompressor;
+use vortex::serde::chunked_reader::ChunkedArrayReader;
+use vortex::serde::io::{ObjectStoreExt, VortexReadAt, VortexWrite};
+use vortex::serde::stream_reader::StreamArrayReader;
+use vortex::serde::stream_writer::StreamArrayWriter;
+use vortex::serde::DTypeReader;
 use vortex::stream::ArrayStreamExt;
 use vortex::{Array, ArrayDType, IntoArray, IntoCanonical};
-use vortex_buffer::Buffer;
-use vortex_dtype::DType;
-use vortex_error::{vortex_err, VortexResult};
-use vortex_sampling_compressor::SamplingCompressor;
-use vortex_serde::chunked_reader::ChunkedArrayReader;
-use vortex_serde::io::{ObjectStoreExt, VortexReadAt, VortexWrite};
-use vortex_serde::stream_reader::StreamArrayReader;
-use vortex_serde::stream_writer::StreamArrayWriter;
-use vortex_serde::DTypeReader;
 
 use crate::{COMPRESSORS, CTX};
 

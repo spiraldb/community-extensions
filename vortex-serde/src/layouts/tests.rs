@@ -3,11 +3,11 @@ use std::iter;
 use std::sync::{Arc, RwLock};
 
 use futures::StreamExt;
-use vortex::accessor::ArrayAccessor;
-use vortex::array::{ChunkedArray, PrimitiveArray, StructArray, VarBinArray};
-use vortex::validity::Validity;
-use vortex::variants::StructArrayTrait;
-use vortex::{ArrayDType, IntoArray, IntoArrayVariant};
+use vortex_array::accessor::ArrayAccessor;
+use vortex_array::array::{ChunkedArray, PrimitiveArray, StructArray, VarBinArray};
+use vortex_array::validity::Validity;
+use vortex_array::variants::StructArrayTrait;
+use vortex_array::{ArrayDType, IntoArray, IntoArrayVariant};
 use vortex_dtype::field::Field;
 use vortex_dtype::{DType, Nullability, PType, StructDType};
 use vortex_error::vortex_panic;

@@ -1,9 +1,9 @@
 use itertools::Itertools;
-use vortex::aliases::hash_set::HashSet;
-use vortex::array::{Struct, StructArray};
-use vortex::encoding::EncodingRef;
-use vortex::variants::StructArrayTrait;
-use vortex::{Array, ArrayDef, IntoArray};
+use vortex_array::aliases::hash_set::HashSet;
+use vortex_array::array::{Struct, StructArray};
+use vortex_array::encoding::EncodingRef;
+use vortex_array::variants::StructArrayTrait;
+use vortex_array::{Array, ArrayDef, IntoArray};
 use vortex_error::VortexResult;
 
 use crate::compressors::{CompressedArray, CompressionTree, EncodingCompressor};

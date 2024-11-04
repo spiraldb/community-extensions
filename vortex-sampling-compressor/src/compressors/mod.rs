@@ -3,9 +3,9 @@ use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 
-use vortex::aliases::hash_set::HashSet;
-use vortex::encoding::EncodingRef;
-use vortex::Array;
+use vortex_array::aliases::hash_set::HashSet;
+use vortex_array::encoding::EncodingRef;
+use vortex_array::Array;
 use vortex_error::VortexResult;
 
 use crate::SamplingCompressor;

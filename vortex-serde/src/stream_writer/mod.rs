@@ -2,9 +2,9 @@ use std::fmt::{Display, Formatter};
 use std::ops::Range;
 
 use futures_util::{Stream, TryStreamExt};
-use vortex::array::ChunkedArray;
-use vortex::stream::ArrayStream;
-use vortex::Array;
+use vortex_array::array::ChunkedArray;
+use vortex_array::stream::ArrayStream;
+use vortex_array::Array;
 use vortex_buffer::Buffer;
 use vortex_dtype::DType;
 use vortex_error::VortexResult;
