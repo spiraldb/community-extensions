@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ "develop" ]
-  pull_request: { }
-  workflow_dispatch: { }
+    branches: ["develop"]
+  pull_request: {}
+  workflow_dispatch: {}
 
 permissions:
   actions: read
@@ -15,14 +15,11 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
-  build:
-    name: 'build'
+  python-lint:
+    name: "Python (lint)"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/cleanup
-
-      - uses: ./.github/actions/setup-rust
       - uses: spiraldb/actions/.github/actions/setup-uv@0.2.0
 
       - name: Python Lint - Format
@@ -30,20 +27,12 @@ jobs:
       - name: Python Lint - Ruff
         run: uv run ruff check .
 
-      - name: Rust Lint - Format
-        run: cargo fmt --all --check
-      - name: Rust Lint - Clippy
-        run: cargo clippy --all-features --all-targets
-      - name: Docs
-        run: cargo doc --no-deps
-      - name: Rust Test
-        run: cargo test --workspace --all-features
-
-      - name: Rust Build (Default features)
-        run: cargo build --all-targets
-
-      - name: Rust Build (All Features)
-        run: cargo build --all-features --all-targets
+  python-test:
+    name: "Python (test)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: spiraldb/actions/.github/actions/setup-uv@0.2.0
 
       - name: Pytest - PyVortex
         run: |
@@ -62,6 +51,57 @@ jobs:
           (cd pyvortex && uv run maturin develop)
 
           (cd docs && uv run make html)
+
+  rust-docs:
+    name: "Rust (docs)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-rust
+      - name: Docs
+        run: cargo doc --no-deps
+
+  build-default:
+    name: "Build (default)"
+    runs-on: ubuntu-latest
+    steps:
+      # setup mold linker
+      - uses: rui314/setup-mold@v1
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/cleanup
+      - uses: ./.github/actions/setup-rust
+      - name: Rust Build (Default features)
+        run: cargo build --all-targets
+
+  build-all:
+    name: "Build (all-features)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: rui314/setup-mold@v1
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/cleanup
+      - uses: ./.github/actions/setup-rust
+      - name: Rust Build (All Features)
+        run: cargo build --all-features --all-targets
+
+  rust-test:
+    name: "Rust (tests)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: rui314/setup-mold@v1
+      - uses: actions/checkout@v4
+      - name: Rust Lint - Format
+        run: cargo fmt --all --check
+      - name: Rust Lint - Clippy
+        run: cargo clippy --all-features --all-targets
+      - name: Rust Test
+        run: cargo test --workspace --all-features
+
+  license-check:
+    name: License check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       - name: License Check
         run: cargo install --locked cargo-deny && cargo deny check
       - uses: rustsec/audit-check@v2.0.0
@@ -70,24 +110,24 @@ jobs:
           ignore: "RUSTSEC-2023-0086"
 
   miri:
-    name: 'miri'
+    name: "miri"
     runs-on: ubuntu-latest
     env:
       MIRIFLAGS: -Zmiri-strict-provenance -Zmiri-symbolic-alignment-check -Zmiri-backtrace=full
     steps:
+      - uses: rui314/setup-mold@v1
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/cleanup
       - uses: ./.github/actions/setup-rust
       - name: Run tests with Miri
         run: cargo miri test
 
   bench-test:
-    name: 'bench test'
+    name: "bench test"
     runs-on: ubuntu-latest
     steps:
+      - uses: rui314/setup-mold@v1
       - uses: actions/checkout@v4
       - uses: ./.github/actions/cleanup
-
       - uses: ./.github/actions/setup-rust
       - uses: spiraldb/actions/.github/actions/setup-uv@0.2.0
       # Required to run benchmarks
@@ -97,3 +137,23 @@ jobs:
           version: v1.0.0
       - name: Rust Bench as test
         run: cargo bench --bench '*[!noci]' -- --test
+
+  generated-files:
+    name: "Check generated proto/fbs files are up to date"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: rui314/setup-mold@v1
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/cleanup
+      - uses: ./.github/actions/setup-rust
+      - uses: ./.github/actions/setup-flatc
+      - name: Install Protoc
+        uses: arduino/setup-protoc@v3
+      - name: "regenerate all .fbs/.proto Rust code"
+        run: |
+          cargo xtask generate-fbs
+          cargo xtask generate-proto
+      - name: "Make sure no files changed after regenerating"
+        run: |
+          test -z "$(git status --porcelain)"
+
