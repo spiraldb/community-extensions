@@ -14,6 +14,8 @@
 #[allow(non_camel_case_types)]
 #[allow(unsafe_op_in_unsafe_fn)]
 #[allow(unused_imports)]
+#[allow(unused_lifetimes)]
+#[allow(unused_qualifications)]
 #[rustfmt::skip]
 #[path = "./generated/array.rs"]
 /// A serialized array without its buffer (i.e. data).
@@ -34,6 +36,8 @@ pub mod array;
 #[allow(non_camel_case_types)]
 #[allow(unsafe_op_in_unsafe_fn)]
 #[allow(unused_imports)]
+#[allow(unused_lifetimes)]
+#[allow(unused_qualifications)]
 #[rustfmt::skip]
 #[path = "./generated/dtype.rs"]
 /// A serialized data type.
@@ -54,6 +58,8 @@ pub mod dtype;
 #[allow(non_camel_case_types)]
 #[allow(unsafe_op_in_unsafe_fn)]
 #[allow(unused_imports)]
+#[allow(unused_lifetimes)]
+#[allow(unused_qualifications)]
 #[rustfmt::skip]
 #[path = "./generated/scalar.rs"]
 /// A serialized scalar.
@@ -74,6 +80,8 @@ pub mod scalar;
 #[allow(non_camel_case_types)]
 #[allow(unsafe_op_in_unsafe_fn)]
 #[allow(unused_imports)]
+#[allow(unused_lifetimes)]
+#[allow(unused_qualifications)]
 #[rustfmt::skip]
 #[path = "./generated/footer.rs"]
 /// A file format footer containining a serialized `vortex-serde` Layout.
@@ -94,6 +102,8 @@ pub mod footer;
 #[allow(non_camel_case_types)]
 #[allow(unsafe_op_in_unsafe_fn)]
 #[allow(unused_imports)]
+#[allow(unused_lifetimes)]
+#[allow(unused_qualifications)]
 #[rustfmt::skip]
 #[path = "./generated/message.rs"]
 /// A serialized sequence of arrays, each with its buffers.
