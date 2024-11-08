@@ -200,23 +200,28 @@ impl<'a> PruningPredicateRewriter<'a> {
                 let replaced_max = self.rewrite_other_exp(Stat::Max);
                 let replaced_min = self.rewrite_other_exp(Stat::Min);
 
-                // In case of other_exp is literal both sides of AND will be the same expression
+                let column_value_is_single_known_value = Arc::new(BinaryExpr::new(
+                    min_col.clone(),
+                    Operator::Eq,
+                    max_col.clone(),
+                ));
+                let column_value = min_col;
+
+                let other_value_is_single_known_value = Arc::new(BinaryExpr::new(
+                    replaced_min.clone(),
+                    Operator::Eq,
+                    replaced_max.clone(),
+                ));
+                let other_value = replaced_min;
+
                 Some(Arc::new(BinaryExpr::new(
                     Arc::new(BinaryExpr::new(
-                        Arc::new(BinaryExpr::new(
-                            min_col.clone(),
-                            Operator::Eq,
-                            replaced_min.clone(),
-                        )),
+                        column_value_is_single_known_value,
                         Operator::And,
-                        Arc::new(BinaryExpr::new(replaced_min, Operator::Eq, max_col.clone())),
+                        other_value_is_single_known_value,
                     )),
-                    Operator::Or,
-                    Arc::new(BinaryExpr::new(
-                        Arc::new(BinaryExpr::new(min_col, Operator::Eq, replaced_max.clone())),
-                        Operator::And,
-                        Arc::new(BinaryExpr::new(replaced_max, Operator::Eq, max_col)),
-                    )),
+                    Operator::And,
+                    Arc::new(BinaryExpr::new(column_value, Operator::Eq, other_value)),
                 )))
             }
             Operator::Gt | Operator::Gte => {
@@ -394,30 +399,23 @@ mod tests {
                 Arc::new(BinaryExpr::new(
                     Arc::new(Column::new(stat_column_name(&column, Stat::Min))),
                     Operator::Eq,
-                    Arc::new(Column::new(stat_column_name(&other_col, Stat::Min))),
+                    Arc::new(Column::new(stat_column_name(&column, Stat::Max))),
                 )),
                 Operator::And,
                 Arc::new(BinaryExpr::new(
                     Arc::new(Column::new(stat_column_name(&other_col, Stat::Min))),
                     Operator::Eq,
-                    Arc::new(Column::new(stat_column_name(&column, Stat::Max))),
+                    Arc::new(Column::new(stat_column_name(&other_col, Stat::Max))),
                 )),
             )),
-            Operator::Or,
+            Operator::And,
             Arc::new(BinaryExpr::new(
-                Arc::new(BinaryExpr::new(
-                    Arc::new(Column::new(stat_column_name(&column, Stat::Min))),
-                    Operator::Eq,
-                    Arc::new(Column::new(stat_column_name(&other_col, Stat::Max))),
-                )),
-                Operator::And,
-                Arc::new(BinaryExpr::new(
-                    Arc::new(Column::new(stat_column_name(&other_col, Stat::Max))),
-                    Operator::Eq,
-                    Arc::new(Column::new(stat_column_name(&column, Stat::Max))),
-                )),
+                Arc::new(Column::new(stat_column_name(&column, Stat::Min))),
+                Operator::Eq,
+                Arc::new(Column::new(stat_column_name(&other_col, Stat::Min))),
             )),
         ));
+
         assert_eq!(*converted, *expected_expr.as_any());
     }
 
