@@ -38,7 +38,12 @@ impl RowMask {
         Ok(Self { values, begin, end })
     }
 
-    /// Construct a RowMask from given bitmap and begin
+    /// Construct a RowMask which is valid in the given range.
+    pub fn new_valid_between(begin: usize, end: usize) -> Self {
+        unsafe { RowMask::new_unchecked(Bitmap::from_range(0..(end - begin) as u32), begin, end) }
+    }
+
+    /// Construct a RowMask from given bitmap and begin.
     ///
     /// # Safety
     ///
