@@ -99,8 +99,8 @@ use crate::dtype::PyDType;
 ///   ]
 ///
 /// Read rows whose name is `Angela` or whose age is between 20 and 30, inclusive. Notice that the
-/// Angela row is excluded because its age is null. The entire row filtering expression therefore
-/// evaluates to null which is interpreted as false:
+/// Angela row is included even though its age is null. Under SQL / Kleene semantics, `true or
+/// null` is `true`.
 ///
 /// >>> name = vortex.expr.column("name")
 /// >>> e = vortex.io.read_path("a.vortex", row_filter = (name == "Angela") | ((age >= 20) & (age <= 30)))
@@ -109,11 +109,13 @@ use crate::dtype::PyDType;
 /// -- is_valid: all not null
 /// -- child 0 type: int64
 ///   [
-///     25
+///     25,
+///     null
 ///   ]
 /// -- child 1 type: string_view
 ///   [
-///     "Joseph"
+///     "Joseph",
+///     "Angela"
 ///   ]
 #[pyclass(name = "Expr", module = "vortex")]
 pub struct PyExpr {
