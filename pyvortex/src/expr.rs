@@ -6,7 +6,7 @@ use pyo3::types::*;
 use vortex::dtype::field::Field;
 use vortex::dtype::half::f16;
 use vortex::dtype::{DType, Nullability, PType};
-use vortex::expr::{BinaryExpr, Column, Literal, Operator, VortexExpr};
+use vortex::expr::{BinaryExpr, Column, ExprRef, Literal, Operator};
 use vortex::scalar::{PValue, Scalar, ScalarValue};
 
 use crate::dtype::PyDType;
@@ -119,11 +119,11 @@ use crate::dtype::PyDType;
 ///   ]
 #[pyclass(name = "Expr", module = "vortex")]
 pub struct PyExpr {
-    inner: Arc<dyn VortexExpr>,
+    inner: ExprRef,
 }
 
 impl PyExpr {
-    pub fn unwrap(&self) -> &Arc<dyn VortexExpr> {
+    pub fn unwrap(&self) -> &ExprRef {
         &self.inner
     }
 }
@@ -136,11 +136,7 @@ fn py_binary_opeartor<'py>(
     Bound::new(
         left.py(),
         PyExpr {
-            inner: Arc::new(BinaryExpr::new(
-                left.inner.clone(),
-                operator,
-                right.borrow().inner.clone(),
-            )),
+            inner: BinaryExpr::new_expr(left.inner.clone(), operator, right.borrow().inner.clone()),
         },
     )
 }
@@ -252,7 +248,7 @@ pub fn column<'py>(name: &Bound<'py, PyString>) -> PyResult<Bound<'py, PyExpr>> 
     Bound::new(
         py,
         PyExpr {
-            inner: Arc::new(Column::new(Field::Name(name))),
+            inner: Column::new_expr(Field::Name(name)),
         },
     )
 }
@@ -270,10 +266,7 @@ pub fn scalar<'py>(dtype: DType, value: &Bound<'py, PyAny>) -> PyResult<Bound<'p
     Bound::new(
         py,
         PyExpr {
-            inner: Arc::new(Literal::new(Scalar::new(
-                dtype.clone(),
-                scalar_value(dtype, value)?,
-            ))),
+            inner: Literal::new_expr(Scalar::new(dtype.clone(), scalar_value(dtype, value)?)),
         },
     )
 }

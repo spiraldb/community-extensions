@@ -1,12 +1,13 @@
 use std::any::Any;
 use std::fmt::Display;
+use std::sync::Arc;
 
 use vortex_array::array::ConstantArray;
 use vortex_array::{Array, IntoArray};
 use vortex_error::VortexResult;
 use vortex_scalar::Scalar;
 
-use crate::{unbox_any, VortexExpr};
+use crate::{unbox_any, ExprRef, VortexExpr};
 
 #[derive(Debug, PartialEq)]
 pub struct Literal {
@@ -14,8 +15,8 @@ pub struct Literal {
 }
 
 impl Literal {
-    pub fn new(value: Scalar) -> Self {
-        Self { value }
+    pub fn new_expr(value: Scalar) -> ExprRef {
+        Arc::new(Self { value })
     }
 
     pub fn value(&self) -> &Scalar {

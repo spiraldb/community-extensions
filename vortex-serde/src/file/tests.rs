@@ -366,11 +366,11 @@ async fn filter_string() {
     writer = writer.write_array_columns(st).await.unwrap();
     let written = writer.finalize().await.unwrap();
     let mut reader = VortexReadBuilder::new(written, LayoutDeserializer::default())
-        .with_row_filter(RowFilter::new(Arc::new(BinaryExpr::new(
-            Arc::new(Column::new(Field::from("name"))),
+        .with_row_filter(RowFilter::new(BinaryExpr::new_expr(
+            Column::new_expr(Field::from("name")),
             Operator::Eq,
-            Arc::new(Literal::new("Joseph".into())),
-        ))))
+            Literal::new_expr("Joseph".into()),
+        )))
         .build()
         .await
         .unwrap();
@@ -423,27 +423,27 @@ async fn filter_or() {
     writer = writer.write_array_columns(st).await.unwrap();
     let written = writer.finalize().await.unwrap();
     let mut reader = VortexReadBuilder::new(written, LayoutDeserializer::default())
-        .with_row_filter(RowFilter::new(Arc::new(BinaryExpr::new(
-            Arc::new(BinaryExpr::new(
-                Arc::new(Column::new(Field::from("name"))),
+        .with_row_filter(RowFilter::new(BinaryExpr::new_expr(
+            BinaryExpr::new_expr(
+                Column::new_expr(Field::from("name")),
                 Operator::Eq,
-                Arc::new(Literal::new("Angela".into())),
-            )),
+                Literal::new_expr("Angela".into()),
+            ),
             Operator::Or,
-            Arc::new(BinaryExpr::new(
-                Arc::new(BinaryExpr::new(
-                    Arc::new(Column::new(Field::from("age"))),
+            BinaryExpr::new_expr(
+                BinaryExpr::new_expr(
+                    Column::new_expr(Field::from("age")),
                     Operator::Gte,
-                    Arc::new(Literal::new(20.into())),
-                )),
+                    Literal::new_expr(20.into()),
+                ),
                 Operator::And,
-                Arc::new(BinaryExpr::new(
-                    Arc::new(Column::new(Field::from("age"))),
+                BinaryExpr::new_expr(
+                    Column::new_expr(Field::from("age")),
                     Operator::Lte,
-                    Arc::new(Literal::new(30.into())),
-                )),
-            )),
-        ))))
+                    Literal::new_expr(30.into()),
+                ),
+            ),
+        )))
         .build()
         .await
         .unwrap();
@@ -499,19 +499,19 @@ async fn filter_and() {
     writer = writer.write_array_columns(st).await.unwrap();
     let written = writer.finalize().await.unwrap();
     let mut reader = VortexReadBuilder::new(written, LayoutDeserializer::default())
-        .with_row_filter(RowFilter::new(Arc::new(BinaryExpr::new(
-            Arc::new(BinaryExpr::new(
-                Arc::new(Column::new(Field::from("age"))),
+        .with_row_filter(RowFilter::new(BinaryExpr::new_expr(
+            BinaryExpr::new_expr(
+                Column::new_expr(Field::from("age")),
                 Operator::Gt,
-                Arc::new(Literal::new(21.into())),
-            )),
+                Literal::new_expr(21.into()),
+            ),
             Operator::And,
-            Arc::new(BinaryExpr::new(
-                Arc::new(Column::new(Field::from("age"))),
+            BinaryExpr::new_expr(
+                Column::new_expr(Field::from("age")),
                 Operator::Lte,
-                Arc::new(Literal::new(33.into())),
-            )),
-        ))))
+                Literal::new_expr(33.into()),
+            ),
+        )))
         .build()
         .await
         .unwrap();
@@ -707,11 +707,11 @@ async fn test_with_indices_and_with_row_filter_simple() {
     let empty_indices = Vec::<u32>::new();
     let actual_kept_array = VortexReadBuilder::new(written.clone(), LayoutDeserializer::default())
         .with_indices(Array::from(empty_indices))
-        .with_row_filter(RowFilter::new(Arc::new(BinaryExpr::new(
-            Arc::new(Column::new(Field::from("numbers"))),
+        .with_row_filter(RowFilter::new(BinaryExpr::new_expr(
+            Column::new_expr(Field::from("numbers")),
             Operator::Gt,
-            Arc::new(Literal::new(50_i16.into())),
-        ))))
+            Literal::new_expr(50_i16.into()),
+        )))
         .build()
         .await
         .unwrap()
@@ -729,11 +729,11 @@ async fn test_with_indices_and_with_row_filter_simple() {
 
     let actual_kept_array = VortexReadBuilder::new(written.clone(), LayoutDeserializer::default())
         .with_indices(Array::from(kept_indices_u16))
-        .with_row_filter(RowFilter::new(Arc::new(BinaryExpr::new(
-            Arc::new(Column::new(Field::from("numbers"))),
+        .with_row_filter(RowFilter::new(BinaryExpr::new_expr(
+            Column::new_expr(Field::from("numbers")),
             Operator::Gt,
-            Arc::new(Literal::new(50_i16.into())),
-        ))))
+            Literal::new_expr(50_i16.into()),
+        )))
         .build()
         .await
         .unwrap()
@@ -760,11 +760,11 @@ async fn test_with_indices_and_with_row_filter_simple() {
     // test all indices
     let actual_array = VortexReadBuilder::new(written.clone(), LayoutDeserializer::default())
         .with_indices(Array::from((0..500).collect::<Vec<u32>>()))
-        .with_row_filter(RowFilter::new(Arc::new(BinaryExpr::new(
-            Arc::new(Column::new(Field::from("numbers"))),
+        .with_row_filter(RowFilter::new(BinaryExpr::new_expr(
+            Column::new_expr(Field::from("numbers")),
             Operator::Gt,
-            Arc::new(Literal::new(50_i16.into())),
-        ))))
+            Literal::new_expr(50_i16.into()),
+        )))
         .build()
         .await
         .unwrap()

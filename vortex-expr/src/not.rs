@@ -7,19 +7,19 @@ use vortex_array::Array;
 use vortex_dtype::field::Field;
 use vortex_error::{vortex_err, VortexResult};
 
-use crate::{unbox_any, VortexExpr};
+use crate::{unbox_any, ExprRef, VortexExpr};
 
 #[derive(Debug)]
 pub struct Not {
-    child: Arc<dyn VortexExpr>,
+    child: ExprRef,
 }
 
 impl Not {
-    pub fn new(child: Arc<dyn VortexExpr>) -> Self {
-        Self { child }
+    pub fn new_expr(child: ExprRef) -> ExprRef {
+        Arc::new(Self { child })
     }
 
-    pub fn child(&self) -> &Arc<dyn VortexExpr> {
+    pub fn child(&self) -> &ExprRef {
         &self.child
     }
 }
@@ -66,11 +66,11 @@ mod tests {
     use vortex_array::array::BoolArray;
     use vortex_array::IntoArrayVariant;
 
-    use crate::{Identity, Not, VortexExpr};
+    use crate::{Identity, Not};
 
     #[test]
     fn invert_booleans() {
-        let not_expr = Not::new(Arc::new(Identity));
+        let not_expr = Not::new_expr(Arc::new(Identity));
         let bools = BoolArray::from(vec![false, true, false, false, true, true]);
         assert_eq!(
             not_expr
