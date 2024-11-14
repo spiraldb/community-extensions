@@ -27,6 +27,7 @@ pub struct SparseMetadata {
     indices_offset: usize,
     indices_len: usize,
     fill_value: ScalarValue,
+    u64_indices: bool,
 }
 
 impl Display for SparseMetadata {
@@ -52,7 +53,7 @@ impl SparseArray {
         indices_offset: usize,
         fill_value: ScalarValue,
     ) -> VortexResult<Self> {
-        if !matches!(indices.dtype(), &DType::IDX) {
+        if !matches!(indices.dtype(), &DType::IDX | &DType::IDX_32) {
             vortex_bail!("Cannot use {} as indices", indices.dtype());
         }
         if !fill_value.is_instance_of(values.dtype()) {
@@ -85,6 +86,7 @@ impl SparseArray {
                 indices_offset,
                 indices_len: indices.len(),
                 fill_value,
+                u64_indices: matches!(indices.dtype(), &DType::IDX),
             },
             [indices, values].into(),
             StatsSet::new(),
@@ -106,7 +108,15 @@ impl SparseArray {
     #[inline]
     pub fn indices(&self) -> Array {
         self.as_ref()
-            .child(0, &DType::IDX, self.metadata().indices_len)
+            .child(
+                0,
+                if self.metadata().u64_indices {
+                    &DType::IDX
+                } else {
+                    &DType::IDX_32
+                },
+                self.metadata().indices_len,
+            )
             .vortex_expect("Missing indices array in SparseArray")
     }
 

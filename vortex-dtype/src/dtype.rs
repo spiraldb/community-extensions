@@ -47,6 +47,9 @@ impl DType {
     /// The default DType for indices
     pub const IDX: Self = Primitive(PType::U64, Nullability::NonNullable);
 
+    /// The DType for small indices (primarily created from bitmaps)
+    pub const IDX_32: Self = Primitive(PType::U32, Nullability::NonNullable);
+
     /// Get the nullability of the DType
     pub fn nullability(&self) -> Nullability {
         self.is_nullable().into()
