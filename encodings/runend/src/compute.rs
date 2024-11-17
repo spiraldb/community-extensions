@@ -4,7 +4,8 @@ use num_traits::AsPrimitive;
 use vortex_array::array::{BoolArray, BooleanBuffer, ConstantArray, PrimitiveArray, SparseArray};
 use vortex_array::compute::unary::{scalar_at, scalar_at_unchecked, ScalarAtFn};
 use vortex_array::compute::{
-    compare, filter, slice, take, ArrayCompute, FilterFn, MaybeCompareFn, Operator, SliceFn, TakeFn,
+    compare, filter, slice, take, ArrayCompute, FilterFn, MaybeCompareFn, Operator, SliceFn,
+    TakeFn, TakeOptions,
 };
 use vortex_array::stats::{ArrayStatistics, Stat};
 use vortex_array::validity::Validity;
@@ -76,7 +77,7 @@ impl ScalarAtFn for RunEndArray {
 }
 
 impl TakeFn for RunEndArray {
-    fn take(&self, indices: &ArrayData) -> VortexResult<ArrayData> {
+    fn take(&self, indices: &ArrayData, options: TakeOptions) -> VortexResult<ArrayData> {
         let primitive_indices = indices.clone().into_primitive()?;
         let u64_indices = match_each_integer_ptype!(primitive_indices.ptype(), |$P| {
             primitive_indices
@@ -99,7 +100,7 @@ impl TakeFn for RunEndArray {
             .map(|idx| *idx as u64)
             .collect();
         let physical_indices_array = PrimitiveArray::from(physical_indices).into_array();
-        let dense_values = take(self.values(), &physical_indices_array)?;
+        let dense_values = take(self.values(), &physical_indices_array, options)?;
 
         Ok(match self.validity() {
             Validity::NonNullable => dense_values,
@@ -108,7 +109,7 @@ impl TakeFn for RunEndArray {
                 ConstantArray::new(Scalar::null(self.dtype().clone()), indices.len()).into_array()
             }
             Validity::Array(original_validity) => {
-                let dense_validity = take(&original_validity, indices)?;
+                let dense_validity = take(&original_validity, indices, options)?;
                 let filtered_values = filter(&dense_values, &dense_validity)?;
                 let length = dense_validity.len();
                 let dense_nonnull_indices = PrimitiveArray::from(
@@ -200,7 +201,7 @@ fn filter_run_ends<R: NativePType + AddAssign + From<bool> + AsPrimitive<u64>>(
 mod test {
     use vortex_array::array::{BoolArray, PrimitiveArray};
     use vortex_array::compute::unary::{scalar_at, try_cast};
-    use vortex_array::compute::{filter, slice, take};
+    use vortex_array::compute::{filter, slice, take, TakeOptions};
     use vortex_array::validity::{ArrayValidity, Validity};
     use vortex_array::{ArrayDType, IntoArrayData, IntoArrayVariant, ToArrayData};
     use vortex_dtype::{DType, Nullability, PType};
@@ -220,6 +221,7 @@ mod test {
         let taken = take(
             ree_array().as_ref(),
             PrimitiveArray::from(vec![9, 8, 1, 3]).as_ref(),
+            TakeOptions::default(),
         )
         .unwrap();
         assert_eq!(
@@ -233,6 +235,7 @@ mod test {
         let taken = take(
             ree_array().as_ref(),
             PrimitiveArray::from(vec![11]).as_ref(),
+            TakeOptions::default(),
         )
         .unwrap();
         assert_eq!(
@@ -247,6 +250,7 @@ mod test {
         take(
             ree_array().as_ref(),
             PrimitiveArray::from(vec![12]).as_ref(),
+            TakeOptions::default(),
         )
         .unwrap();
     }
@@ -407,7 +411,7 @@ mod test {
         .unwrap();
 
         let test_indices = PrimitiveArray::from_vec(vec![0, 2, 4, 6], Validity::NonNullable);
-        let taken = take(arr.as_ref(), test_indices.as_ref()).unwrap();
+        let taken = take(arr.as_ref(), test_indices.as_ref(), TakeOptions::default()).unwrap();
 
         assert_eq!(taken.len(), test_indices.len());
 
@@ -426,6 +430,7 @@ mod test {
         let taken = take(
             sliced.as_ref(),
             PrimitiveArray::from(vec![1, 3, 4]).as_ref(),
+            TakeOptions::default(),
         )
         .unwrap();
 
