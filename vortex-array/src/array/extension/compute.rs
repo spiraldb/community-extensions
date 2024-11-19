@@ -52,7 +52,8 @@ impl MaybeCompareFn for ExtensionArray {
             return Some(compare(self.storage(), const_storage, operator));
         }
 
-        if let Ok(rhs_ext) = ExtensionArray::try_from(other) {
+        // TODO(ngates): do not use try_from to test for encoding.
+        if let Ok(rhs_ext) = ExtensionArray::try_from(other.clone()) {
             return Some(compare(self.storage(), rhs_ext.storage(), operator));
         }
 

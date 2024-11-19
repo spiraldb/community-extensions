@@ -14,9 +14,12 @@ use vortex_scalar::Scalar;
 use crate::compute::unary::scalar_at;
 use crate::encoding::{EncodingId, EncodingRef};
 use crate::iter::{ArrayIterator, ArrayIteratorAdapter};
-use crate::stats::{ArrayStatistics, Stat, StatsSet};
+use crate::stats::{ArrayStatistics, Stat, Statistics, StatsSet};
 use crate::stream::{ArrayStream, ArrayStreamAdapter};
-use crate::{ArrayChildrenIterator, ArrayDType, ArrayMetadata, ArrayTrait, Context};
+use crate::{
+    ArrayChildrenIterator, ArrayDType, ArrayLen, ArrayMetadata, ArrayTrait, Context,
+    TryDeserializeArrayMetadata,
+};
 
 mod owned;
 mod viewed;
@@ -25,15 +28,26 @@ mod viewed;
 ///
 /// This is the main entrypoint for working with in-memory Vortex data, and dispatches work over the underlying encoding or memory representations.
 #[derive(Debug, Clone)]
-pub struct ArrayData(pub(crate) InnerArrayData);
+pub struct ArrayData(InnerArrayData);
 
-// TODO(ngates): make this non-pub once TypedArray disappears
 #[derive(Debug, Clone)]
-pub(crate) enum InnerArrayData {
+enum InnerArrayData {
     /// Owned [`ArrayData`] with serialized metadata, backed by heap-allocated memory.
     Owned(OwnedArrayData),
     /// Zero-copy view over flatbuffer-encoded [`ArrayData`] data, created without eager serialization.
     Viewed(ViewedArrayData),
+}
+
+impl From<OwnedArrayData> for ArrayData {
+    fn from(data: OwnedArrayData) -> Self {
+        ArrayData(InnerArrayData::Owned(data))
+    }
+}
+
+impl From<ViewedArrayData> for ArrayData {
+    fn from(data: ViewedArrayData) -> Self {
+        ArrayData(InnerArrayData::Viewed(data))
+    }
 }
 
 impl ArrayData {
@@ -199,11 +213,30 @@ impl ArrayData {
         offsets
     }
 
+    pub fn metadata<M: ArrayMetadata + Clone + for<'m> TryDeserializeArrayMetadata<'m>>(
+        &self,
+    ) -> VortexResult<M> {
+        match &self.0 {
+            InnerArrayData::Owned(d) => d
+                .metadata()
+                .as_any()
+                .downcast_ref::<M>()
+                .ok_or_else(|| {
+                    vortex_err!(
+                        "Failed to downcast metadata to {}",
+                        std::any::type_name::<M>()
+                    )
+                })
+                .cloned(),
+            InnerArrayData::Viewed(v) => M::try_deserialize_metadata(v.metadata()),
+        }
+    }
+
     /// Get back the (possibly owned) metadata for the array.
     ///
     /// View arrays will return a reference to their bytes, while heap-backed arrays
     /// must first serialize their metadata, returning an owned byte array to the caller.
-    pub fn metadata(&self) -> VortexResult<Cow<[u8]>> {
+    pub fn metadata_bytes(&self) -> VortexResult<Cow<[u8]>> {
         match &self.0 {
             InnerArrayData::Owned(array_data) => {
                 // Heap-backed arrays must first try and serialize the metadata.
@@ -311,5 +344,40 @@ impl Display for ArrayData {
             self.dtype(),
             self.len()
         )
+    }
+}
+
+impl<T: AsRef<ArrayData>> ArrayDType for T {
+    fn dtype(&self) -> &DType {
+        match &self.as_ref().0 {
+            InnerArrayData::Owned(d) => d.dtype(),
+            InnerArrayData::Viewed(v) => v.dtype(),
+        }
+    }
+}
+
+impl<T: AsRef<ArrayData>> ArrayLen for T {
+    fn len(&self) -> usize {
+        self.as_ref().len()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.as_ref().is_empty()
+    }
+}
+
+impl<T: AsRef<ArrayData>> ArrayStatistics for T {
+    fn statistics(&self) -> &(dyn Statistics + '_) {
+        match &self.as_ref().0 {
+            InnerArrayData::Owned(d) => d.statistics(),
+            InnerArrayData::Viewed(v) => v.statistics(),
+        }
+    }
+
+    fn inherit_statistics(&self, parent: &dyn Statistics) {
+        let stats = self.statistics();
+        for (stat, scalar) in parent.to_set() {
+            stats.set(stat, scalar);
+        }
     }
 }
