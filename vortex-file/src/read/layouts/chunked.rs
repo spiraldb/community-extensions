@@ -2,7 +2,7 @@ use std::collections::{BTreeSet, VecDeque};
 
 use bytes::Bytes;
 use itertools::Itertools;
-use vortex_error::VortexResult;
+use vortex_error::{vortex_err, VortexResult};
 use vortex_flatbuffers::footer;
 
 use crate::read::buffered::{BufferedLayoutReader, RangedLayoutReader};
@@ -37,6 +37,8 @@ impl LayoutSpec for ChunkedLayoutSpec {
         )))
     }
 }
+
+const METADATA_LAYOUT_PART_ID: LayoutPartId = 0;
 
 /// In memory representation of Chunked NestedLayout.
 ///
@@ -77,11 +79,36 @@ impl ChunkedLayout {
         }
     }
 
+    #[allow(dead_code)]
+    fn metadata_layout(&self) -> VortexResult<Option<Box<dyn LayoutReader>>> {
+        self.has_metadata()
+            .then(|| {
+                let metadata_fb = self
+                    .flatbuffer()
+                    .children()
+                    .ok_or_else(|| vortex_err!("must have metadata"))?
+                    .get(0);
+                self.layout_builder.read_layout(
+                    self.fb_bytes.clone(),
+                    metadata_fb._tab.loc(),
+                    Scan::new(None),
+                    self.message_cache.unknown_dtype(METADATA_LAYOUT_PART_ID),
+                )
+            })
+            .transpose()
+    }
+
     fn has_metadata(&self) -> bool {
         self.flatbuffer()
             .metadata()
             .map(|b| b.bytes()[0] != 0)
             .unwrap_or(false)
+    }
+
+    #[allow(dead_code)]
+    fn n_chunks(&self) -> usize {
+        self.flatbuffer().children().unwrap_or_default().len()
+            - (if self.has_metadata() { 1 } else { 0 })
     }
 
     fn children(&self) -> impl Iterator<Item = (usize, footer::Layout)> {
@@ -115,7 +142,7 @@ impl ChunkedLayout {
                     self.fb_bytes.clone(),
                     c._tab.loc(),
                     self.scan.clone(),
-                    cache(i as u16),
+                    cache(i as LayoutPartId),
                 )?;
                 Ok(((begin, end), layout))
             })
@@ -249,6 +276,13 @@ mod tests {
             )))),
         )
         .await;
+
+        assert_eq!(filter_layout.n_chunks(), 5);
+        assert_eq!(projection_layout.n_chunks(), 5);
+
+        assert!(filter_layout.metadata_layout().unwrap().is_none());
+        assert!(projection_layout.metadata_layout().unwrap().is_none());
+
         let arr = filter_read_layout(
             &mut filter_layout,
             &mut projection_layout,
