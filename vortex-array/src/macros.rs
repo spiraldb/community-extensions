@@ -41,27 +41,32 @@ macro_rules! impl_encoding {
                 type Encoding = [<$Name Encoding>];
             }
 
-            #[derive(std::fmt::Debug, Clone)]
-            pub struct [<$Name Array>] {
-                data: $crate::ArrayData,
-                metadata: [<$Name Metadata>],
+            impl $crate::encoding::Encoding for [<$Name Encoding>] {
+                type Array = [<$Name Array>];
+                type Metadata = [<$Name Metadata>];
             }
+
+            #[derive(std::fmt::Debug, Clone)]
+            #[repr(transparent)]
+            pub struct [<$Name Array>]($crate::ArrayData);
 
             impl $crate::IntoArrayData for [<$Name Array>] {
                 fn into_array(self) -> $crate::ArrayData {
-                    self.data
+                    self.0
                 }
             }
             impl AsRef<$crate::ArrayData> for [<$Name Array>] {
                 fn as_ref(&self) -> &$crate::ArrayData {
-                    &self.data
+                    &self.0
                 }
             }
 
             impl [<$Name Array>] {
                 #[allow(dead_code)]
                 fn metadata(&self) -> &[<$Name Metadata>] {
-                    &self.metadata
+                    use vortex_error::VortexExpect;
+                    self.0.metadata::<[<$Name Metadata>]>()
+                        .vortex_expect("Metadata should be tied to the encoding")
                 }
 
                 #[allow(dead_code)]
@@ -95,10 +100,7 @@ macro_rules! impl_encoding {
                             <$Name as $crate::ArrayDef>::ID,
                         );
                     }
-
-                    let metadata = data.metadata::<[<$Name Metadata>]>()?;
-
-                    Ok(Self { data, metadata })
+                    Ok(Self(data))
                 }
             }
 
@@ -109,11 +111,6 @@ macro_rules! impl_encoding {
                 #[inline]
                 fn id(&self) -> $crate::encoding::EncodingId {
                     <$Name as $crate::ArrayDef>::ID
-                }
-
-                #[inline]
-                fn canonicalize(&self, array: $crate::ArrayData) -> vortex_error::VortexResult<$crate::Canonical> {
-                    <Self as $crate::encoding::ArrayEncodingExt>::into_canonical(array)
                 }
 
                 #[inline]

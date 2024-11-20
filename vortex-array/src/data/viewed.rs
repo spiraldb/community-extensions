@@ -12,7 +12,7 @@ use crate::array::visitor::ArrayVisitor;
 use crate::encoding::opaque::OpaqueEncoding;
 use crate::encoding::EncodingRef;
 use crate::stats::{Stat, Statistics, StatsSet};
-use crate::{flatbuffers as fb, ArrayData, Context};
+use crate::{flatbuffers as fb, ArrayData, ArrayMetadata, Context};
 
 /// Zero-copy view over flatbuffer-encoded array data, created without eager serialization.
 #[derive(Clone)]
@@ -20,13 +20,11 @@ pub(super) struct ViewedArrayData {
     pub(super) encoding: EncodingRef,
     pub(super) dtype: DType,
     pub(super) len: usize,
+    pub(super) metadata: Arc<dyn ArrayMetadata>,
     pub(super) flatbuffer: Buffer,
     pub(super) flatbuffer_loc: usize,
     pub(super) buffers: Arc<[Buffer]>,
     pub(super) ctx: Arc<Context>,
-    // TODO(ngates): a store a Projection. A projected ArrayView contains the full fb::Array
-    //  metadata, but only the buffers from the selected columns. Therefore we need to know
-    //  which fb:Array children to skip when calculating how to slice into buffers.
 }
 
 impl Debug for ViewedArrayData {
@@ -64,7 +62,7 @@ impl ViewedArrayData {
         self.len == 0
     }
 
-    pub fn metadata(&self) -> Option<&[u8]> {
+    pub fn metadata_bytes(&self) -> Option<&[u8]> {
         self.flatbuffer().metadata().map(|m| m.bytes())
     }
 
@@ -86,10 +84,13 @@ impl ViewedArrayData {
                 Box::leak(Box::new(OpaqueEncoding(child.encoding())))
             });
 
+        let metadata = encoding.load_metadata(child.metadata().map(|m| m.bytes()))?;
+
         Ok(Self {
             encoding,
             dtype: dtype.clone(),
             len,
+            metadata,
             flatbuffer: self.flatbuffer.clone(),
             flatbuffer_loc,
             buffers: self.buffers.clone(),
