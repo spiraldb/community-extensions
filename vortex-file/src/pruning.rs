@@ -15,6 +15,8 @@ use vortex_error::{VortexExpect as _, VortexResult};
 use vortex_expr::{BinaryExpr, Column, ExprRef, Literal, Not, Operator};
 use vortex_scalar::Scalar;
 
+use crate::RowFilter;
+
 #[derive(Debug, Clone)]
 pub struct Relation<K, V> {
     map: HashMap<K, HashSet<V>>,
@@ -36,6 +38,17 @@ impl<K: Hash + Eq, V: Hash + Eq> Relation<K, V> {
     pub fn new() -> Self {
         Relation {
             map: HashMap::new(),
+        }
+    }
+
+    pub fn union(mut iter: impl Iterator<Item = Relation<K, V>>) -> Relation<K, V> {
+        if let Some(mut x) = iter.next() {
+            for y in iter {
+                x.extend(y)
+            }
+            x
+        } else {
+            Relation::new()
         }
     }
 
@@ -181,6 +194,21 @@ fn convert_to_pruning_expression(expr: &ExprRef) -> PruningPredicateStats {
             .and_then(PruningPredicateRewriter::rewrite)
             .unwrap_or_else(not_prunable);
         }
+    }
+
+    if let Some(RowFilter { conjunction }) = expr.as_any().downcast_ref::<RowFilter>() {
+        let (rewritten_conjunction, refses): (Vec<ExprRef>, Vec<Relation<Field, Stat>>) =
+            conjunction
+                .iter()
+                .map(convert_to_pruning_expression)
+                .unzip();
+
+        let refs = Relation::union(refses.into_iter());
+
+        return (
+            RowFilter::from_conjunction_expr(rewritten_conjunction),
+            refs,
+        );
     }
 
     not_prunable()
