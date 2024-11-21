@@ -135,6 +135,13 @@ impl PruningPredicate {
     }
 }
 
+fn not_prunable() -> PruningPredicateStats {
+    (
+        Literal::new_expr(Scalar::bool(false, Nullability::NonNullable)),
+        Relation::new(),
+    )
+}
+
 // Anything that can't be translated has to be represented as
 // boolean true expression, i.e. the value might be in that chunk
 fn convert_to_pruning_expression(expr: &ExprRef) -> PruningPredicateStats {
@@ -162,12 +169,7 @@ fn convert_to_pruning_expression(expr: &ExprRef) -> PruningPredicateStats {
         if let Some(col) = bexp.lhs().as_any().downcast_ref::<Column>() {
             return PruningPredicateRewriter::try_new(col.field().clone(), bexp.op(), bexp.rhs())
                 .and_then(PruningPredicateRewriter::rewrite)
-                .unwrap_or_else(|| {
-                    (
-                        Literal::new_expr(Scalar::bool(false, Nullability::NonNullable)),
-                        Relation::new(),
-                    )
-                });
+                .unwrap_or_else(not_prunable);
         };
 
         if let Some(col) = bexp.rhs().as_any().downcast_ref::<Column>() {
@@ -177,38 +179,29 @@ fn convert_to_pruning_expression(expr: &ExprRef) -> PruningPredicateStats {
                 bexp.lhs(),
             )
             .and_then(PruningPredicateRewriter::rewrite)
-            .unwrap_or_else(|| {
-                (
-                    Literal::new_expr(Scalar::bool(false, Nullability::NonNullable)),
-                    Relation::new(),
-                )
-            });
-        };
+            .unwrap_or_else(not_prunable);
+        }
     }
 
-    (
-        Literal::new_expr(Scalar::bool(false, Nullability::NonNullable)),
-        Relation::new(),
-    )
+    not_prunable()
 }
 
 fn convert_column_reference(expr: &ExprRef, invert: bool) -> PruningPredicateStats {
     let mut refs = Relation::new();
-    let min_expr = replace_column_with_stat(expr, Stat::Min, &mut refs);
-    let max_expr = replace_column_with_stat(expr, Stat::Max, &mut refs);
-    (
-        min_expr
-            .zip(max_expr)
-            .map(|(min_exp, max_exp)| {
-                if invert {
-                    BinaryExpr::new_expr(min_exp, Operator::And, max_exp)
-                } else {
-                    Not::new_expr(BinaryExpr::new_expr(min_exp, Operator::Or, max_exp))
-                }
-            })
-            .unwrap_or_else(|| Literal::new_expr(Scalar::bool(false, Nullability::NonNullable))),
-        refs,
-    )
+    let Some(min_expr) = replace_column_with_stat(expr, Stat::Min, &mut refs) else {
+        return not_prunable();
+    };
+    let Some(max_expr) = replace_column_with_stat(expr, Stat::Max, &mut refs) else {
+        return not_prunable();
+    };
+
+    let expr = if invert {
+        BinaryExpr::new_expr(min_expr, Operator::And, max_expr)
+    } else {
+        Not::new_expr(BinaryExpr::new_expr(min_expr, Operator::Or, max_expr))
+    };
+
+    (expr, refs)
 }
 
 struct PruningPredicateRewriter<'a> {
