@@ -8,14 +8,12 @@
 //! from Arrow.
 
 pub use boolean::{and, and_kleene, or, or_kleene, BinaryBooleanFn, BinaryOperator};
-pub(crate) use compare::arrow_compare;
-pub use compare::{compare, scalar_cmp, CompareFn, MaybeCompareFn, Operator};
+pub use compare::{compare, scalar_cmp, CompareFn, Operator};
 pub use filter::*;
 pub use search_sorted::*;
 pub use slice::{slice, SliceFn};
 pub use take::*;
 use unary::{CastFn, FillForwardFn, ScalarAtFn, SubtractScalarFn};
-use vortex_error::VortexResult;
 
 use crate::ArrayData;
 
@@ -97,7 +95,7 @@ pub trait ArrayCompute {
     /// Binary operator implementation for arrays against other arrays.
     ///
     ///See: [CompareFn].
-    fn compare(&self, _other: &ArrayData, _operator: Operator) -> Option<VortexResult<ArrayData>> {
+    fn compare(&self) -> Option<&dyn CompareFn> {
         None
     }
 

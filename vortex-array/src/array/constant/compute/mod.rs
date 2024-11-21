@@ -1,4 +1,5 @@
 mod boolean;
+mod compare;
 mod search_sorted;
 
 use vortex_error::VortexResult;
@@ -8,14 +9,14 @@ use crate::array::constant::ConstantArray;
 use crate::array::ConstantEncoding;
 use crate::compute::unary::ScalarAtFn;
 use crate::compute::{
-    scalar_cmp, ArrayCompute, BinaryBooleanFn, ComputeVTable, FilterFn, FilterMask, MaybeCompareFn,
-    Operator, SearchSortedFn, SliceFn, TakeFn, TakeOptions,
+    ArrayCompute, BinaryBooleanFn, CompareFn, ComputeVTable, FilterFn, FilterMask, SearchSortedFn,
+    SliceFn, TakeFn, TakeOptions,
 };
-use crate::{ArrayData, ArrayLen, IntoArrayData};
+use crate::{ArrayData, IntoArrayData};
 
 impl ArrayCompute for ConstantArray {
-    fn compare(&self, other: &ArrayData, operator: Operator) -> Option<VortexResult<ArrayData>> {
-        MaybeCompareFn::maybe_compare(self, other, operator)
+    fn compare(&self) -> Option<&dyn CompareFn> {
+        Some(self)
     }
 }
 
@@ -77,19 +78,5 @@ impl SliceFn<ConstantArray> for ConstantEncoding {
 impl FilterFn<ConstantArray> for ConstantEncoding {
     fn filter(&self, array: &ConstantArray, mask: FilterMask) -> VortexResult<ArrayData> {
         Ok(ConstantArray::new(array.owned_scalar(), mask.true_count()).into_array())
-    }
-}
-
-impl MaybeCompareFn for ConstantArray {
-    fn maybe_compare(
-        &self,
-        other: &ArrayData,
-        operator: Operator,
-    ) -> Option<VortexResult<ArrayData>> {
-        other.as_constant().map(|const_scalar| {
-            let lhs = self.owned_scalar();
-            let scalar = scalar_cmp(&lhs, &const_scalar, operator);
-            Ok(ConstantArray::new(scalar, self.len()).into_array())
-        })
     }
 }
