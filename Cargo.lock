@@ -4659,7 +4659,6 @@ dependencies = [
  "vortex-runend-bool",
  "vortex-sampling-compressor",
  "vortex-scalar",
- "vortex-schema",
  "vortex-zigzag",
 ]
 
@@ -4891,7 +4890,6 @@ dependencies = [
  "arrow-array",
  "arrow-buffer",
  "arrow-schema",
- "arrow-select",
  "bytes",
  "flatbuffers",
  "futures",
@@ -4900,7 +4898,6 @@ dependencies = [
  "itertools 0.13.0",
  "once_cell",
  "rstest",
- "tempfile",
  "tokio",
  "tracing",
  "vortex-array",
@@ -4911,9 +4908,7 @@ dependencies = [
  "vortex-flatbuffers",
  "vortex-io",
  "vortex-ipc",
- "vortex-sampling-compressor",
  "vortex-scalar",
- "vortex-schema",
 ]
 
 [[package]]
@@ -5096,14 +5091,6 @@ dependencies = [
  "vortex-error",
  "vortex-flatbuffers",
  "vortex-proto",
-]
-
-[[package]]
-name = "vortex-schema"
-version = "0.19.0"
-dependencies = [
- "vortex-dtype",
- "vortex-error",
 ]
 
 [[package]]
