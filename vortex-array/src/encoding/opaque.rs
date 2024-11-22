@@ -7,6 +7,7 @@ use vortex_error::{vortex_bail, VortexResult};
 use crate::compute::ComputeVTable;
 use crate::encoding::{EncodingId, EncodingVTable};
 use crate::stats::StatisticsVTable;
+use crate::visitor::{ArrayVisitor, VisitorVTable};
 use crate::{
     ArrayData, ArrayMetadata, ArrayTrait, Canonical, IntoCanonicalVTable, MetadataVTable,
     TrySerializeArrayMetadata,
@@ -64,6 +65,15 @@ impl MetadataVTable for OpaqueEncoding {
 }
 
 impl StatisticsVTable<ArrayData> for OpaqueEncoding {}
+
+impl VisitorVTable<ArrayData> for OpaqueEncoding {
+    fn accept(&self, _array: &ArrayData, _visitor: &mut dyn ArrayVisitor) -> VortexResult<()> {
+        vortex_bail!(
+            "OpaqueEncoding: into_canonical cannot be called for opaque array ({})",
+            self.0
+        )
+    }
+}
 
 #[derive(Debug)]
 pub struct OpaqueMetadata;

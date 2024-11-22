@@ -8,6 +8,7 @@ use vortex_error::{vortex_panic, VortexResult};
 
 use crate::compute::ComputeVTable;
 use crate::stats::StatisticsVTable;
+use crate::visitor::VisitorVTable;
 use crate::{ArrayData, ArrayDef, ArrayMetadata, ArrayTrait, IntoCanonicalVTable, MetadataVTable};
 
 pub mod opaque;
@@ -59,7 +60,7 @@ impl AsRef<str> for EncodingId {
 }
 
 /// Marker trait for array encodings with their associated Array type.
-pub trait Encoding {
+pub trait Encoding: 'static {
     type Array;
     type Metadata: ArrayMetadata;
 }
@@ -76,6 +77,7 @@ pub trait EncodingVTable:
     + MetadataVTable
     + ComputeVTable
     + StatisticsVTable<ArrayData>
+    + VisitorVTable<ArrayData>
 {
     fn id(&self) -> EncodingId;
 
