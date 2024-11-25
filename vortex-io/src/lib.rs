@@ -16,6 +16,7 @@ pub use read::*;
 pub use tokio::*;
 pub use write::*;
 
+mod aligned;
 mod buf;
 #[cfg(feature = "compio")]
 mod compio;
@@ -27,3 +28,6 @@ mod read;
 #[cfg(feature = "tokio")]
 mod tokio;
 mod write;
+
+/// Required alignment for all custom buffer allocations.
+pub const ALIGNMENT: usize = 64;

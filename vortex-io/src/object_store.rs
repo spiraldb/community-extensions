@@ -4,13 +4,15 @@ use std::sync::Arc;
 use std::{io, mem};
 
 use bytes::Bytes;
+use futures_util::StreamExt;
 use object_store::path::Path;
-use object_store::{ObjectStore, WriteMultipart};
+use object_store::{GetOptions, GetRange, ObjectStore, WriteMultipart};
 use vortex_buffer::io_buf::IoBuf;
 use vortex_buffer::Buffer;
 use vortex_error::{vortex_panic, VortexError, VortexResult};
 
-use crate::{VortexBufReader, VortexReadAt, VortexWrite};
+use crate::aligned::AlignedBytesMut;
+use crate::{VortexBufReader, VortexReadAt, VortexWrite, ALIGNMENT};
 
 pub trait ObjectStoreExt {
     fn vortex_read(
@@ -76,10 +78,27 @@ impl VortexReadAt for ObjectStoreReadAt {
 
         Box::pin(async move {
             let start_range = pos as usize;
-            let bytes = object_store
-                .get_range(&location, start_range..(start_range + len as usize))
+
+            let mut buf = AlignedBytesMut::<ALIGNMENT>::with_capacity(len as _);
+
+            let get_range = start_range..(start_range + len as usize);
+            let response = object_store
+                .get_opts(
+                    &location,
+                    GetOptions {
+                        range: Some(GetRange::Bounded(get_range)),
+                        ..Default::default()
+                    },
+                )
                 .await?;
-            Ok(bytes)
+
+            let mut byte_stream = response.into_stream();
+            while let Some(bytes) = byte_stream.next().await {
+                let bytes = bytes?;
+                buf.extend_from_slice(&bytes);
+            }
+
+            Ok(buf.freeze())
         })
     }
 
