@@ -6,7 +6,6 @@ use compio::buf::{IoBuf, IoBufMut, SetBufInit};
 use compio::fs::File;
 use compio::io::AsyncReadAtExt;
 use compio::BufResult;
-use vortex_error::vortex_panic;
 
 use crate::aligned::{AlignedBytesMut, PowerOfTwo};
 use crate::{VortexReadAt, ALIGNMENT};
@@ -67,14 +66,9 @@ impl VortexReadAt for File {
         }
     }
 
-    fn size(&self) -> impl Future<Output = u64> + 'static {
+    fn size(&self) -> impl Future<Output = io::Result<u64>> + 'static {
         let this = self.clone();
-        async move {
-            this.metadata()
-                .await
-                .map(|metadata| metadata.len())
-                .unwrap_or_else(|e| vortex_panic!("compio File::size: {e}"))
-        }
+        async move { this.metadata().await.map(|metadata| metadata.len()) }
     }
 }
 
