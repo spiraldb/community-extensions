@@ -4964,6 +4964,7 @@ dependencies = [
  "futures",
  "futures-util",
  "object_store",
+ "pin-project",
  "tempfile",
  "tokio",
  "tracing",
