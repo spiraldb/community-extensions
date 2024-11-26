@@ -71,6 +71,35 @@ async fn test_read_simple() {
 
 #[tokio::test]
 #[cfg_attr(miri, ignore)]
+async fn test_read_simple_with_spawn() {
+    let strings = ChunkedArray::from_iter([
+        VarBinArray::from(vec!["ab", "foo", "bar", "baz"]).into_array(),
+        VarBinArray::from(vec!["ab", "foo", "bar", "baz"]).into_array(),
+    ])
+    .into_array();
+
+    let numbers = ChunkedArray::from_iter([
+        PrimitiveArray::from(vec![1u32, 2, 3, 4]).into_array(),
+        PrimitiveArray::from(vec![5u32, 6, 7, 8]).into_array(),
+    ])
+    .into_array();
+
+    let st = StructArray::from_fields(&[("strings", strings), ("numbers", numbers)]).unwrap();
+    let buf = Vec::new();
+
+    let written = tokio::spawn(async move {
+        let mut writer = VortexFileWriter::new(buf);
+        writer = writer.write_array_columns(st.into_array()).await.unwrap();
+        Buffer::from(writer.finalize().await.unwrap())
+    })
+    .await
+    .unwrap();
+
+    assert!(!written.is_empty());
+}
+
+#[tokio::test]
+#[cfg_attr(miri, ignore)]
 async fn test_splits() {
     let strings = ChunkedArray::from_iter([
         VarBinArray::from(vec!["ab", "foo", "baz"]).into_array(),
