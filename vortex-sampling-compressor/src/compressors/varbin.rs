@@ -35,15 +35,23 @@ impl EncodingCompressor for VarBinCompressor {
             &varbin_array.offsets(),
             like.as_ref().and_then(|l| l.child(0)),
         )?;
+        let (validity, validity_path) = ctx.compress_validity(
+            varbin_array.validity(),
+            like.as_ref().and_then(|l| l.child(2)),
+        )?;
+
         Ok(CompressedArray::compressed(
             VarBinArray::try_new(
                 offsets.array,
                 varbin_array.bytes(), // we don't compress the raw bytes
                 array.dtype().clone(),
-                varbin_array.validity(),
+                validity,
             )?
             .into_array(),
-            Some(CompressionTree::new(self, vec![offsets.path, None, None])),
+            Some(CompressionTree::new(
+                self,
+                vec![offsets.path, None, validity_path],
+            )),
             Some(array.statistics()),
         ))
     }
