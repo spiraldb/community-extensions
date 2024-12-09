@@ -1,5 +1,5 @@
 use std::iter::TrustedLen;
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 
 use arrow_array::BooleanArray;
 use arrow_buffer::{BooleanBuffer, BooleanBufferBuilder, MutableBuffer};
@@ -118,9 +118,9 @@ pub struct FilterMask {
     array: ArrayData,
     true_count: usize,
     range_selectivity: f64,
-    indices: OnceLock<Vec<usize>>,
-    slices: OnceLock<Vec<(usize, usize)>>,
-    buffer: OnceLock<BooleanBuffer>,
+    indices: Arc<OnceLock<Vec<usize>>>,
+    slices: Arc<OnceLock<Vec<(usize, usize)>>>,
+    buffer: Arc<OnceLock<BooleanBuffer>>,
 }
 
 /// We implement Clone manually to trigger population of our cached indices or slices.
@@ -328,9 +328,9 @@ impl TryFrom<ArrayData> for FilterMask {
             array,
             true_count,
             range_selectivity: selectivity,
-            indices: OnceLock::new(),
-            slices: OnceLock::new(),
-            buffer: OnceLock::new(),
+            indices: Arc::new(OnceLock::new()),
+            slices: Arc::new(OnceLock::new()),
+            buffer: Arc::new(OnceLock::new()),
         })
     }
 }
