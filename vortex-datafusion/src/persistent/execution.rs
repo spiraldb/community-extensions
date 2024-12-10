@@ -14,6 +14,7 @@ use datafusion_physical_plan::{
 use itertools::Itertools;
 use vortex_array::Context;
 
+use super::cache::InitialReadCache;
 use crate::persistent::opener::VortexFileOpener;
 
 #[derive(Debug, Clone)]
@@ -24,6 +25,7 @@ pub struct VortexExec {
     plan_properties: PlanProperties,
     projected_statistics: Statistics,
     ctx: Arc<Context>,
+    initial_read_cache: InitialReadCache,
 }
 
 impl VortexExec {
@@ -32,6 +34,7 @@ impl VortexExec {
         metrics: ExecutionPlanMetricsSet,
         predicate: Option<Arc<dyn PhysicalExpr>>,
         ctx: Arc<Context>,
+        initial_read_cache: InitialReadCache,
     ) -> DFResult<Self> {
         let projected_schema = project_schema(
             &file_scan_config.file_schema,
@@ -60,6 +63,7 @@ impl VortexExec {
             plan_properties,
             projected_statistics,
             ctx,
+            initial_read_cache,
         })
     }
 
@@ -118,6 +122,7 @@ impl ExecutionPlan for VortexExec {
             object_store,
             projection: self.file_scan_config.projection.clone(),
             predicate: self.predicate.clone(),
+            initial_read_cache: self.initial_read_cache.clone(),
             arrow_schema,
         };
         let stream = FileStream::new(&self.file_scan_config, partition, opener, &self.metrics)?;
