@@ -1,6 +1,5 @@
 use arrow_buffer::ArrowNativeType;
 use fastlanes::BitPacking;
-use itertools::Itertools;
 use vortex_array::array::PrimitiveArray;
 use vortex_array::compute::{filter, FilterFn, FilterIter, FilterMask};
 use vortex_array::variants::PrimitiveArrayTrait;
@@ -8,6 +7,7 @@ use vortex_array::{ArrayData, IntoArrayData, IntoArrayVariant};
 use vortex_dtype::{match_each_unsigned_integer_ptype, NativePType};
 use vortex_error::VortexResult;
 
+use super::chunked_indices;
 use crate::bitpacking::compute::take::UNPACK_CHUNK_THRESHOLD;
 use crate::{BitPackedArray, BitPackedEncoding};
 
@@ -66,19 +66,14 @@ fn filter_indices<T: NativePType + BitPacking + ArrowNativeType>(
     let mut values = Vec::with_capacity(indices_len);
 
     // Some re-usable memory to store per-chunk indices.
-    let mut indices_within_chunk: Vec<usize> = Vec::with_capacity(1024);
     let mut unpacked = [T::zero(); 1024];
+    let packed_bytes = array.packed_slice::<T>();
 
     // Group the indices by the FastLanes chunk they belong to.
-    let chunked = indices.chunk_by(|&idx| (idx + offset) / 1024);
-    let chunk_len = 128 * bit_width / size_of::<T>();
+    let chunk_size = 128 * bit_width / size_of::<T>();
 
-    chunked.into_iter().for_each(|(chunk_idx, indices)| {
-        let packed = &array.packed_slice::<T>()[chunk_idx * chunk_len..(chunk_idx + 1) * chunk_len];
-
-        // Re-use the indices buffer to store the indices within the current chunk.
-        indices_within_chunk.clear();
-        indices_within_chunk.extend(indices.map(|idx| (idx + offset) % 1024));
+    chunked_indices(indices, offset, |chunk_idx, indices_within_chunk| {
+        let packed = &packed_bytes[chunk_idx * chunk_size..][..chunk_size];
 
         if indices_within_chunk.len() == 1024 {
             // Unpack the entire chunk.
