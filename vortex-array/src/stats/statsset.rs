@@ -1,7 +1,4 @@
-use core::mem;
-
 use enum_iterator::all;
-use enum_map::EnumMap;
 use itertools::{EitherOrBoth, Itertools};
 use vortex_dtype::DType;
 use vortex_error::{vortex_panic, VortexError};
@@ -11,22 +8,29 @@ use crate::stats::Stat;
 
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct StatsSet {
-    values: EnumMap<Stat, Option<Scalar>>,
+    values: Vec<(Stat, Option<Scalar>)>,
 }
 
 impl StatsSet {
+    /// Create new StatSet without validating uniqueness of all the entries
+    pub fn new_unchecked(values: Vec<(Stat, Scalar)>) -> Self {
+        Self {
+            values: values.into_iter().map(|(st, s)| (st, Some(s))).collect(),
+        }
+    }
+
     pub fn len(&self) -> usize {
-        self.values.values().filter(|v| v.is_some()).count()
+        self.values.iter().filter(|(_, v)| v.is_some()).count()
     }
 
     pub fn is_empty(&self) -> bool {
-        self.values.values().all(|v| v.is_none())
+        self.values.is_empty()
     }
 
     /// Specialized constructor for the case where the StatsSet represents
     /// an array consisting entirely of [null](vortex_dtype::DType::Null) values.
     pub fn nulls(len: usize, dtype: &DType) -> Self {
-        let mut stats = Self::from_iter([
+        let mut stats = Self::new_unchecked(vec![
             (Stat::Min, Scalar::null(dtype.clone())),
             (Stat::Max, Scalar::null(dtype.clone())),
             (Stat::RunCount, 1.into()),
@@ -91,7 +95,7 @@ impl StatsSet {
         null_count: usize,
         len: usize,
     ) -> Self {
-        StatsSet::from_iter([
+        StatsSet::new_unchecked(vec![
             (Stat::TrueCount, true_count.into()),
             (Stat::NullCount, null_count.into()),
             (Stat::Min, (true_count == len).into()),
@@ -104,11 +108,14 @@ impl StatsSet {
     }
 
     pub fn of<S: Into<Scalar>>(stat: Stat, value: S) -> Self {
-        Self::from_iter([(stat, value.into())])
+        Self::new_unchecked(vec![(stat, value.into())])
     }
 
     pub fn get(&self, stat: Stat) -> Option<&Scalar> {
-        self.values[stat].as_ref()
+        self.values
+            .iter()
+            .find(|(s, _)| *s == stat)
+            .and_then(|(_, v)| v.as_ref())
     }
 
     pub fn get_as<T: for<'a> TryFrom<&'a Scalar, Error = VortexError>>(
@@ -129,19 +136,21 @@ impl StatsSet {
 
     /// Set the stat `stat` to `value`.
     pub fn set<S: Into<Scalar>>(&mut self, stat: Stat, value: S) {
-        self.values[stat] = Some(value.into());
+        let new_value = Some(value.into());
+        if let Some(existing) = self.values.iter_mut().find(|(s, _)| *s == stat) {
+            *existing = (stat, new_value);
+        } else {
+            self.values.push((stat, new_value));
+        }
     }
 
     /// Clear the stat `stat` from the set.
     pub fn clear(&mut self, stat: Stat) {
-        self.values[stat] = None;
+        self.values.retain(|(s, _)| *s != stat);
     }
 
     pub fn retain_only(&mut self, stats: &[Stat]) {
-        let mut old_map = mem::take(&mut self.values);
-        for stat in stats {
-            self.values[*stat] = old_map[*stat].take();
-        }
+        self.values.retain(|(s, _)| stats.contains(s))
     }
 
     /// Merge stats set `other` into `self`, with the semantic assumption that `other`
@@ -320,22 +329,6 @@ impl StatsSet {
     }
 }
 
-impl From<EnumMap<Stat, Option<Scalar>>> for StatsSet {
-    fn from(values: EnumMap<Stat, Option<Scalar>>) -> Self {
-        Self { values }
-    }
-}
-
-impl FromIterator<(Stat, Scalar)> for StatsSet {
-    fn from_iter<T: IntoIterator<Item = (Stat, Scalar)>>(iter: T) -> Self {
-        let mut values = EnumMap::<Stat, Option<Scalar>>::default();
-        iter.into_iter().for_each(|(stat, scalar)| {
-            values[stat] = Some(scalar);
-        });
-        Self { values }
-    }
-}
-
 impl Extend<(Stat, Scalar)> for StatsSet {
     #[inline]
     fn extend<T: IntoIterator<Item = (Stat, Scalar)>>(&mut self, iter: T) {
@@ -346,7 +339,7 @@ impl Extend<(Stat, Scalar)> for StatsSet {
 }
 
 pub struct StatsSetIntoIter {
-    inner: enum_map::IntoIter<Stat, Option<Scalar>>,
+    inner: std::vec::IntoIter<(Stat, Option<Scalar>)>,
 }
 
 impl Iterator for StatsSetIntoIter {
@@ -390,7 +383,7 @@ mod test {
 
     #[test]
     fn into_iter() {
-        let set = StatsSet::from_iter([(Stat::Max, 100.into()), (Stat::Min, 42.into())]);
+        let set = StatsSet::new_unchecked(vec![(Stat::Max, 100.into()), (Stat::Min, 42.into())]);
         assert_eq!(
             set.into_iter().collect_vec(),
             vec![(Stat::Max, 100.into()), (Stat::Min, 42.into())]
