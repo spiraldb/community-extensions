@@ -5041,6 +5041,7 @@ name = "vortex-io"
 version = "0.21.0"
 dependencies = [
  "bytes",
+ "cfg-if",
  "compio",
  "flume",
  "futures",
