@@ -56,18 +56,18 @@ fn runend_encode_primitive<T: NativePType>(elements: &[T]) -> (Vec<u64>, Vec<T>)
     }
 
     // Run-end encode the values
-    let mut last = elements[0];
+    let mut prev = elements[0];
     let mut end = 1;
     for &e in elements.iter().skip(1) {
-        if e != last {
+        if e != prev {
             ends.push(end);
-            values.push(last);
+            values.push(prev);
         }
-        last = e;
+        prev = e;
         end += 1;
     }
     ends.push(end);
-    values.push(last);
+    values.push(prev);
 
     (ends, values)
 }
@@ -91,7 +91,7 @@ fn runend_encode_nullable_primitive<T: NativePType>(
     }
 
     // Run-end encode the values
-    let mut last = element_validity.value(0).then(|| elements[0]);
+    let mut prev = element_validity.value(0).then(|| elements[0]);
     let mut end = 1;
     for e in elements
         .iter()
@@ -99,32 +99,32 @@ fn runend_encode_nullable_primitive<T: NativePType>(
         .map(|(&e, is_valid)| is_valid.then_some(e))
         .skip(1)
     {
-        if e != last {
+        if e != prev {
             ends.push(end);
-            match e {
+            match prev {
                 None => {
                     validity.append(false);
                     values.push(T::default());
                 }
-                Some(e) => {
+                Some(p) => {
                     validity.append(true);
-                    values.push(e);
+                    values.push(p);
                 }
             }
         }
-        last = e;
+        prev = e;
         end += 1;
     }
     ends.push(end);
 
-    match last {
+    match prev {
         None => {
             validity.append(false);
             values.push(T::default());
         }
-        Some(e) => {
+        Some(p) => {
             validity.append(true);
-            values.push(e);
+            values.push(p);
         }
     }
 
@@ -272,7 +272,9 @@ pub fn runend_decode_typed_bool(
 
 #[cfg(test)]
 mod test {
+    use arrow_buffer::BooleanBuffer;
     use vortex_array::array::PrimitiveArray;
+    use vortex_array::validity::Validity;
     use vortex_array::IntoArrayVariant;
 
     use crate::compress::{runend_decode_primitive, runend_encode};
@@ -285,6 +287,21 @@ mod test {
 
         assert_eq!(ends.maybe_null_slice::<u64>(), vec![2, 5, 10]);
         assert_eq!(values.maybe_null_slice::<i32>(), vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn encode_nullable() {
+        let arr = PrimitiveArray::from_vec(
+            vec![1i32, 1, 2, 2, 2, 3, 3, 3, 3, 3],
+            Validity::from(BooleanBuffer::from(vec![
+                true, true, false, false, true, true, true, true, false, false,
+            ])),
+        );
+        let (ends, values) = runend_encode(&arr).unwrap();
+        let values = values.into_primitive().unwrap();
+
+        assert_eq!(ends.maybe_null_slice::<u64>(), vec![2, 4, 5, 8, 10]);
+        assert_eq!(values.maybe_null_slice::<i32>(), vec![1, 0, 2, 3, 0]);
     }
 
     #[test]
