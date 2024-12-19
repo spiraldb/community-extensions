@@ -28,12 +28,12 @@ impl TakeFn<BitPackedArray> for BitPackedEncoding {
 
         // NOTE: we use the unsigned PType because all values in the BitPackedArray must
         //  be non-negative (pre-condition of creating the BitPackedArray).
-        let ptype: PType = PType::try_from(array.dtype())?.to_unsigned();
+        let ptype: PType = PType::try_from(array.dtype())?;
         let validity = array.validity();
         let taken_validity = validity.take(indices)?;
 
         let indices = indices.clone().into_primitive()?;
-        let taken = match_each_unsigned_integer_ptype!(ptype, |$T| {
+        let taken = match_each_unsigned_integer_ptype!(ptype.to_unsigned(), |$T| {
             match_each_integer_ptype!(indices.ptype(), |$I| {
                 take_primitive::<$T, $I>(array, &indices, taken_validity)?
             })
@@ -107,7 +107,11 @@ fn take_primitive<T: NativePType + BitPacking, I: NativePType>(
         }
     });
 
-    let unpatched_taken = PrimitiveArray::from_vec(output, taken_validity);
+    let mut unpatched_taken = PrimitiveArray::from_vec(output, taken_validity);
+    // Flip back to signed type before patching.
+    if array.ptype().is_signed_int() {
+        unpatched_taken = unpatched_taken.reinterpret_cast(array.ptype());
+    }
     if let Some(patches) = array.patches() {
         if let Some(patches) = patches.take(&indices.to_array())? {
             return unpatched_taken.patch(patches);
@@ -125,6 +129,7 @@ mod test {
     use rand::{thread_rng, Rng};
     use vortex_array::array::PrimitiveArray;
     use vortex_array::compute::{scalar_at, slice, take};
+    use vortex_array::validity::Validity;
     use vortex_array::{IntoArrayData, IntoArrayVariant};
 
     use crate::BitPackedArray;
@@ -209,5 +214,26 @@ mod test {
                     values[*i as usize]
                 );
             });
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore)]
+    fn take_signed_with_patches() {
+        let start = BitPackedArray::encode(
+            &PrimitiveArray::from(vec![1i32, 2i32, 3i32, 4i32]).into_array(),
+            1,
+        )
+        .unwrap();
+
+        let taken_primitive = super::take_primitive::<u32, u64>(
+            &start,
+            &PrimitiveArray::from(vec![0u64, 1, 2, 3]),
+            Validity::NonNullable,
+        )
+        .unwrap();
+        assert_eq!(
+            taken_primitive.into_maybe_null_slice::<i32>(),
+            vec![1i32, 2, 3, 4]
+        );
     }
 }

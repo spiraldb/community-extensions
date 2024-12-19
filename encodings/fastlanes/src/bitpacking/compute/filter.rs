@@ -178,9 +178,6 @@ mod test {
 
     #[test]
     fn filter_bitpacked_signed() {
-        // Elements 0..=499 are negative integers (patches)
-        // Element 500 = 0 (packed)
-        // Elements 501..999 are positive integers (packed)
         let values: Vec<i64> = (0..500).collect_vec();
         let unpacked = PrimitiveArray::from(values.clone());
         let bitpacked = BitPackedArray::encode(unpacked.as_ref(), 9).unwrap();
