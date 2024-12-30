@@ -2,11 +2,11 @@ use std::cmp::{max, min};
 use std::fmt::{Display, Formatter};
 
 use arrow_buffer::BooleanBuffer;
-use itertools::Itertools;
 use vortex_array::array::{PrimitiveArray, SparseArray};
 use vortex_array::compute::{and, filter, slice, try_cast, FilterMask};
 use vortex_array::validity::{ArrayValidity, LogicalValidity, Validity};
 use vortex_array::{ArrayData, IntoArrayData, IntoArrayVariant};
+use vortex_buffer::Buffer;
 use vortex_dtype::Nullability::NonNullable;
 use vortex_dtype::{DType, PType};
 use vortex_error::{vortex_bail, VortexResult, VortexUnwrap};
@@ -95,10 +95,7 @@ impl RowMask {
         // TODO(ngates): should from_indices take u64?
         let mask = FilterMask::from_indices(
             end - begin,
-            indices
-                .maybe_null_slice::<u64>()
-                .iter()
-                .map(|i| *i as usize),
+            indices.as_slice::<u64>().iter().map(|i| *i as usize),
         );
 
         RowMask::try_new(mask, begin, end)
@@ -180,6 +177,8 @@ impl RowMask {
         let sliced = if self.len() == array.len() {
             array
         } else {
+            // TODO(ngates): I thought the point was the array only covers the valid row range of
+            //  the mask?
             &slice(array, self.begin, self.end)?
         };
 
@@ -192,8 +191,11 @@ impl RowMask {
 
     #[allow(deprecated)]
     fn to_indices_array(&self) -> VortexResult<ArrayData> {
-        Ok(PrimitiveArray::from_vec(
-            self.mask.iter_indices()?.map(|i| i as u64).collect_vec(),
+        Ok(PrimitiveArray::new(
+            self.mask
+                .iter_indices()?
+                .map(|i| i as u64)
+                .collect::<Buffer<u64>>(),
             Validity::NonNullable,
         )
         .into_array())
@@ -220,9 +222,9 @@ impl RowMask {
 mod tests {
     use arrow_buffer::BooleanBuffer;
     use rstest::rstest;
-    use vortex_array::array::PrimitiveArray;
     use vortex_array::compute::FilterMask;
     use vortex_array::{IntoArrayData, IntoArrayVariant};
+    use vortex_buffer::Buffer;
     use vortex_error::VortexUnwrap;
 
     use crate::read::mask::RowMask;
@@ -293,10 +295,10 @@ mod tests {
             10,
         )
         .unwrap();
-        let array = PrimitiveArray::from((0..20).collect::<Vec<_>>()).into_array();
+        let array = Buffer::from_iter(0..20).into_array();
         let filtered = mask.filter_array(array).unwrap().unwrap();
         assert_eq!(
-            filtered.into_primitive().unwrap().maybe_null_slice::<i32>(),
+            filtered.into_primitive().unwrap().as_slice::<i32>(),
             (5..10).collect::<Vec<_>>()
         );
     }
