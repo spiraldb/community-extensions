@@ -4937,6 +4937,7 @@ dependencies = [
  "rstest",
  "serde",
  "static_assertions",
+ "vortex-array",
  "vortex-buffer",
  "vortex-datetime-dtype",
  "vortex-dtype",
