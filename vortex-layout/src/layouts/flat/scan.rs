@@ -133,7 +133,7 @@ mod test {
     use vortex_array::{ArrayDType, IntoArrayVariant, ToArrayData};
     use vortex_buffer::buffer;
     use vortex_dtype::{DType, Nullability};
-    use vortex_expr::{BinaryExpr, Identity, Literal, Operator};
+    use vortex_expr::{lit, BinaryExpr, Identity, Operator};
 
     use crate::layouts::flat::writer::FlatLayoutWriter;
     use crate::scanner::Scan;
@@ -169,7 +169,7 @@ mod test {
             filter: Some(BinaryExpr::new_expr(
                 Arc::new(Identity),
                 Operator::Gt,
-                Literal::new_expr(3i32.into()),
+                lit(3i32),
             )),
         };
 
@@ -191,15 +191,11 @@ mod test {
 
         let scan = Scan {
             // The projection function here changes the scan's DType to boolean
-            projection: BinaryExpr::new_expr(
-                Arc::new(Identity),
-                Operator::Lt,
-                Literal::new_expr(5.into()),
-            ),
+            projection: BinaryExpr::new_expr(Arc::new(Identity), Operator::Lt, lit(5)),
             filter: Some(BinaryExpr::new_expr(
                 Arc::new(Identity),
                 Operator::Gt,
-                Literal::new_expr(3.into()),
+                lit(3),
             )),
         };
 
