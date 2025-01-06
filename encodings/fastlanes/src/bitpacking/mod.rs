@@ -293,7 +293,7 @@ impl PrimitiveArrayTrait for BitPackedArray {}
 mod test {
     use vortex_array::array::PrimitiveArray;
     use vortex_array::patches::PatchesMetadata;
-    use vortex_array::test_utils::check_metadata;
+    use vortex_array::test_harness::check_metadata;
     use vortex_array::validity::ValidityMetadata;
     use vortex_array::{IntoArrayData, IntoArrayVariant, IntoCanonical};
     use vortex_buffer::Buffer;

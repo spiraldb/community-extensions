@@ -249,7 +249,7 @@ impl StatisticsVTable<RunEndArray> for RunEndEncoding {
 #[cfg(test)]
 mod tests {
     use vortex_array::compute::scalar_at;
-    use vortex_array::test_utils::check_metadata;
+    use vortex_array::test_harness::check_metadata;
     use vortex_array::{ArrayDType, ArrayLen, IntoArrayData};
     use vortex_buffer::buffer;
     use vortex_dtype::{DType, Nullability, PType};

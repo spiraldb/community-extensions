@@ -252,7 +252,7 @@ mod test {
     use vortex_array::array::BoolArray;
     use vortex_array::compute::{scalar_at, slice, take};
     use vortex_array::stats::ArrayStatistics;
-    use vortex_array::test_utils::check_metadata;
+    use vortex_array::test_harness::check_metadata;
     use vortex_array::validity::{Validity, ValidityMetadata};
     use vortex_array::{
         ArrayDType, ArrayData, ArrayLen, IntoArrayData, IntoCanonical, ToArrayData,

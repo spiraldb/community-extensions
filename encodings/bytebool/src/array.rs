@@ -133,7 +133,7 @@ impl VisitorVTable<ByteBoolArray> for ByteBoolEncoding {
 
 #[cfg(test)]
 mod tests {
-    use vortex_array::test_utils::check_metadata;
+    use vortex_array::test_harness::check_metadata;
     use vortex_array::validity::ArrayValidity;
 
     use super::*;

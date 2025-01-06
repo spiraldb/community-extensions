@@ -21,7 +21,7 @@ use crate::array::{
     SparseMetadata, StructMetadata, VarBinMetadata, VarBinViewMetadata,
 };
 use crate::patches::PatchesMetadata;
-use crate::test_utils::check_metadata;
+use crate::test_harness::check_metadata;
 use crate::validity::ValidityMetadata;
 
 #[cfg_attr(miri, ignore)]

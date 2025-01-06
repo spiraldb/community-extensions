@@ -43,8 +43,8 @@ pub mod nbytes;
 pub mod patches;
 pub mod stats;
 pub mod stream;
-#[cfg(feature = "test_util")]
-pub mod test_utils;
+#[cfg(feature = "test-harness")]
+pub mod test_harness;
 pub mod tree;
 pub mod validity;
 pub mod variants;

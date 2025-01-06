@@ -228,7 +228,7 @@ impl ArrayTrait for FSSTArray {}
 
 #[cfg(test)]
 mod test {
-    use vortex_array::test_utils::check_metadata;
+    use vortex_array::test_harness::check_metadata;
     use vortex_dtype::{Nullability, PType};
 
     use crate::FSSTMetadata;

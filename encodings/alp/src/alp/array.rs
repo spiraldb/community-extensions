@@ -154,7 +154,7 @@ impl StatisticsVTable<ALPArray> for ALPEncoding {}
 #[cfg(test)]
 mod tests {
     use vortex_array::patches::PatchesMetadata;
-    use vortex_array::test_utils::check_metadata;
+    use vortex_array::test_harness::check_metadata;
     use vortex_dtype::PType;
 
     use crate::{ALPMetadata, Exponents};

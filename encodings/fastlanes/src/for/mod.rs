@@ -123,7 +123,7 @@ impl PrimitiveArrayTrait for FoRArray {}
 
 #[cfg(test)]
 mod test {
-    use vortex_array::test_utils::check_metadata;
+    use vortex_array::test_harness::check_metadata;
     use vortex_scalar::PValue;
 
     use crate::FoRMetadata;

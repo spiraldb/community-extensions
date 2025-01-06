@@ -139,7 +139,7 @@ mod test {
     use std::iter;
 
     use vortex_array::array::BoolArray;
-    use vortex_array::test_utils::check_metadata;
+    use vortex_array::test_harness::check_metadata;
     use vortex_array::{ArrayLen, IntoArrayData, IntoArrayVariant};
 
     use crate::{RoaringBoolArray, RoaringBoolMetadata};
