@@ -5106,6 +5106,7 @@ dependencies = [
  "vortex-flatbuffers",
  "vortex-io",
  "vortex-ipc",
+ "vortex-layout",
  "vortex-scalar",
 ]
 
