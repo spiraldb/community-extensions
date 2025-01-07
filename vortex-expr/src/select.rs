@@ -8,7 +8,7 @@ use vortex_array::ArrayData;
 use vortex_dtype::Field;
 use vortex_error::{vortex_err, VortexResult};
 
-use crate::VortexExpr;
+use crate::{ExprRef, VortexExpr};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Select {
@@ -31,6 +31,13 @@ impl Select {
 
     pub fn exclude_expr(columns: Vec<Field>) -> Arc<Self> {
         Arc::new(Self::exclude(columns))
+    }
+
+    pub fn fields(&self) -> &[Field] {
+        match self {
+            Select::Include(fields) => fields,
+            Select::Exclude(fields) => fields,
+        }
     }
 }
 
@@ -77,12 +84,13 @@ impl VortexExpr for Select {
         }
     }
 
-    fn collect_references<'a>(&'a self, references: &mut HashSet<&'a Field>) {
-        match self {
-            Select::Include(f) => references.extend(f.iter()),
-            // It's weird that we treat the references of exclusions and inclusions the same, we need to have a wrapper around Field in the return
-            Select::Exclude(e) => references.extend(e.iter()),
-        }
+    fn children(&self) -> Vec<&ExprRef> {
+        vec![]
+    }
+
+    fn replacing_children(self: Arc<Self>, children: Vec<ExprRef>) -> ExprRef {
+        assert_eq!(children.len(), 0);
+        self
     }
 }
 

@@ -15,7 +15,7 @@ use vortex_scalar::Scalar;
 
 use crate::{
     and, col, eq, gt, gt_eq, lit, lt_eq, or, BinaryExpr, Column, ExprRef, Identity, Literal, Not,
-    Operator, RowFilter,
+    Operator, RowFilter, VortexExprExt,
 };
 
 #[derive(Debug, Clone)]

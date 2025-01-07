@@ -30,6 +30,15 @@ impl VortexExpr for Identity {
     fn evaluate(&self, batch: &ArrayData) -> VortexResult<ArrayData> {
         Ok(batch.clone())
     }
+
+    fn children(&self) -> Vec<&ExprRef> {
+        vec![]
+    }
+
+    fn replacing_children(self: Arc<Self>, children: Vec<ExprRef>) -> ExprRef {
+        assert_eq!(children.len(), 0);
+        self
+    }
 }
 
 // Return a global pointer to the identity token.

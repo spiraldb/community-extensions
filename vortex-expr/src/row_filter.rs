@@ -3,7 +3,6 @@ use std::fmt::{Debug, Display};
 use std::sync::Arc;
 
 use itertools::Itertools;
-use vortex_array::aliases::hash_set::HashSet;
 use vortex_array::array::ConstantArray;
 use vortex_array::compute::{and_kleene, fill_null};
 use vortex_array::stats::ArrayStatistics;
@@ -89,9 +88,12 @@ impl VortexExpr for RowFilter {
         fill_null(mask, false.into())
     }
 
-    fn collect_references<'a>(&'a self, references: &mut HashSet<&'a Field>) {
-        for expr in self.conjunction.iter() {
-            expr.collect_references(references);
-        }
+    fn children(&self) -> Vec<&ExprRef> {
+        self.conjunction.iter().collect()
+    }
+
+    fn replacing_children(self: Arc<Self>, children: Vec<ExprRef>) -> ExprRef {
+        assert_eq!(self.conjunction.len(), children.len());
+        Self::from_conjunction_expr(children)
     }
 }

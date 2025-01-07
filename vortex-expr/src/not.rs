@@ -2,10 +2,8 @@ use std::any::Any;
 use std::fmt::Display;
 use std::sync::Arc;
 
-use vortex_array::aliases::hash_set::HashSet;
 use vortex_array::compute::invert;
 use vortex_array::ArrayData;
-use vortex_dtype::Field;
 use vortex_error::VortexResult;
 
 use crate::{ExprRef, VortexExpr};
@@ -42,8 +40,13 @@ impl VortexExpr for Not {
         invert(&child_result)
     }
 
-    fn collect_references<'a>(&'a self, references: &mut HashSet<&'a Field>) {
-        self.child.collect_references(references)
+    fn children(&self) -> Vec<&ExprRef> {
+        vec![&self.child]
+    }
+
+    fn replacing_children(self: Arc<Self>, mut children: Vec<ExprRef>) -> ExprRef {
+        assert_eq!(children.len(), 0);
+        Self::new_expr(children.remove(0))
     }
 }
 

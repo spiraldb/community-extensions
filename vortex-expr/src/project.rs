@@ -5,7 +5,7 @@ use vortex_dtype::Field;
 
 use crate::{
     col, lit, BinaryExpr, Column, ExprRef, Identity, Like, Literal, Not, Operator, RowFilter,
-    Select, VortexExpr,
+    Select, VortexExpr, VortexExprExt,
 };
 
 /// Restrict expression to only the fields that appear in projection
@@ -52,7 +52,7 @@ pub fn expr_project(expr: &ExprRef, projection: &[Field]) -> Option<ExprRef> {
             }
         })
     } else if let Some(n) = expr.as_any().downcast_ref::<Not>() {
-        let own_refs = n.references();
+        let own_refs = expr.references();
         if own_refs.iter().all(|p| projection.contains(p)) {
             expr_project(n.child(), projection).map(Not::new_expr)
         } else {

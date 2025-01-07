@@ -15,8 +15,10 @@ pub struct Literal {
 }
 
 impl Literal {
-    pub fn new_expr(value: Scalar) -> ExprRef {
-        Arc::new(Self { value })
+    pub fn new_expr(value: impl Into<Scalar>) -> ExprRef {
+        Arc::new(Self {
+            value: value.into(),
+        })
     }
 
     pub fn value(&self) -> &Scalar {
@@ -37,6 +39,15 @@ impl VortexExpr for Literal {
 
     fn evaluate(&self, batch: &ArrayData) -> VortexResult<ArrayData> {
         Ok(ConstantArray::new(self.value.clone(), batch.len()).into_array())
+    }
+
+    fn children(&self) -> Vec<&ExprRef> {
+        vec![]
+    }
+
+    fn replacing_children(self: Arc<Self>, children: Vec<ExprRef>) -> ExprRef {
+        assert_eq!(children.len(), 0);
+        self
     }
 }
 

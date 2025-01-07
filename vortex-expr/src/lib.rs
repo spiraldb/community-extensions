@@ -2,8 +2,6 @@ use std::any::Any;
 use std::fmt::{Debug, Display};
 use std::sync::Arc;
 
-use vortex_array::aliases::hash_set::HashSet;
-
 mod binary;
 mod column;
 pub mod datafusion;
@@ -16,6 +14,8 @@ mod project;
 pub mod pruning;
 mod row_filter;
 mod select;
+#[allow(dead_code)]
+mod traversal;
 
 pub use binary::*;
 pub use column::*;
@@ -27,9 +27,12 @@ pub use operators::*;
 pub use project::*;
 pub use row_filter::*;
 pub use select::*;
+use vortex_array::aliases::hash_set::HashSet;
 use vortex_array::ArrayData;
 use vortex_dtype::Field;
-use vortex_error::VortexResult;
+use vortex_error::{VortexResult, VortexUnwrap};
+
+use crate::traversal::{Node, ReferenceCollector};
 
 pub type ExprRef = Arc<dyn VortexExpr>;
 
@@ -41,14 +44,22 @@ pub trait VortexExpr: Debug + Send + Sync + DynEq + Display {
     /// Compute result of expression on given batch producing a new batch
     fn evaluate(&self, batch: &ArrayData) -> VortexResult<ArrayData>;
 
-    /// Accumulate all field references from this expression and its children in the provided set
-    fn collect_references<'a>(&'a self, _references: &mut HashSet<&'a Field>) {}
+    fn children(&self) -> Vec<&ExprRef>;
 
-    /// Accumulate all field references from this expression and its children in a new set
+    fn replacing_children(self: Arc<Self>, children: Vec<ExprRef>) -> ExprRef;
+}
+
+pub trait VortexExprExt {
+    /// Accumulate all field references from this expression and its children in a set
+    fn references(&self) -> HashSet<&Field>;
+}
+
+impl VortexExprExt for ExprRef {
     fn references(&self) -> HashSet<&Field> {
-        let mut refs = HashSet::new();
-        self.collect_references(&mut refs);
-        refs
+        let mut collector = ReferenceCollector::new();
+        // The collector is infallible, so we can unwrap the result
+        self.accept(&mut collector).vortex_unwrap();
+        collector.into_fields()
     }
 }
 
