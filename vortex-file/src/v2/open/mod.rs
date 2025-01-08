@@ -1,7 +1,11 @@
+mod split_by;
+
 use std::io::Read;
+use std::ops::Range;
 
 use flatbuffers::root;
 use itertools::Itertools;
+pub use split_by::*;
 use vortex_array::ContextRef;
 use vortex_buffer::{ByteBuffer, ByteBufferMut};
 use vortex_dtype::DType;
@@ -32,6 +36,7 @@ pub struct OpenOptions {
     //  additional caching, metrics, or other intercepts, etc. It should support synchronous
     //  read + write of Map<MessageId, ByteBuffer> or similar.
     initial_read_size: u64,
+    split_by: SplitBy,
 }
 
 impl OpenOptions {
@@ -42,6 +47,7 @@ impl OpenOptions {
             file_layout: None,
             dtype: None,
             initial_read_size: INITIAL_READ_SIZE,
+            split_by: SplitBy::Layout,
         }
     }
 
@@ -52,6 +58,14 @@ impl OpenOptions {
         }
         self.initial_read_size = initial_read_size;
         Ok(self)
+    }
+
+    /// Configure how to split the file into batches for reading.
+    ///
+    /// Defaults to [`SplitBy::Layout`].
+    pub fn with_split_by(mut self, split_by: SplitBy) -> Self {
+        self.split_by = split_by;
+        self
     }
 }
 
@@ -120,6 +134,9 @@ impl OpenOptions {
             &mut segment_cache,
         )?;
 
+        // Compute the splits of the file.
+        let splits: Vec<Range<u64>> = self.split_by.splits(&file_layout.root_layout)?;
+
         // Finally, create the VortexFile.
         Ok(VortexFile {
             read,
@@ -127,6 +144,7 @@ impl OpenOptions {
             layout: file_layout.root_layout,
             segments: file_layout.segments,
             segment_cache,
+            splits,
         })
     }
 
