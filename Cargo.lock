@@ -5302,6 +5302,7 @@ dependencies = [
  "paste",
  "prost",
  "prost-types",
+ "rstest",
  "serde",
  "vortex-buffer",
  "vortex-datetime-dtype",
