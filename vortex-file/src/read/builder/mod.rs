@@ -4,7 +4,7 @@ use initial_read::read_initial_bytes;
 use vortex_array::{ArrayDType, ArrayData};
 use vortex_dtype::DType;
 use vortex_error::{vortex_bail, VortexResult};
-use vortex_expr::{RowFilter, Select};
+use vortex_expr::{ident, RowFilter, Select};
 use vortex_io::{IoDispatcher, VortexReadAt};
 
 use super::handle::VortexReadHandle;
@@ -161,7 +161,7 @@ impl<R: VortexReadAt + Unpin> VortexReadBuilder<R> {
             initial_read.fb_layout(),
             match self.projection {
                 Projection::All => Scan::empty(),
-                Projection::Flat(p) => Scan::new(Arc::new(Select::include(p))),
+                Projection::Flat(p) => Scan::new(Select::include_expr(p, ident())),
             },
             top_level_dtype.clone(),
         )?;

@@ -5,6 +5,7 @@ use std::sync::Arc;
 mod binary;
 mod column;
 pub mod datafusion;
+mod get_item;
 mod identity;
 mod like;
 mod literal;
@@ -20,6 +21,7 @@ mod traversal;
 
 pub use binary::*;
 pub use column::*;
+pub use get_item::*;
 pub use identity::*;
 pub use like::*;
 pub use literal::*;
@@ -184,21 +186,21 @@ mod tests {
         assert_eq!(Not::new_expr(col1.clone()).to_string(), "!$col1");
 
         assert_eq!(
-            Select::include(vec![Field::from("col1")]).to_string(),
-            "Include($col1)"
+            Select::include_expr(vec![Field::from("col1")], ident()).to_string(),
+            "select +($col1) []"
         );
         assert_eq!(
-            Select::include(vec![Field::from("col1"), Field::from("col2")]).to_string(),
-            "Include($col1,$col2)"
+            Select::include_expr(vec![Field::from("col1"), Field::from("col2")], ident())
+                .to_string(),
+            "select +($col1,$col2) []"
         );
         assert_eq!(
-            Select::exclude(vec![
-                Field::from("col1"),
-                Field::from("col2"),
-                Field::Index(1),
-            ])
+            Select::exclude_expr(
+                vec![Field::from("col1"), Field::from("col2"), Field::Index(1),],
+                ident()
+            )
             .to_string(),
-            "Exclude($col1,$col2,[1])"
+            "select -($col1,$col2,[1]) []"
         );
 
         assert_eq!(lit(Scalar::from(0_u8)).to_string(), "0_u8");
