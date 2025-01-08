@@ -5108,6 +5108,7 @@ dependencies = [
  "vortex-ipc",
  "vortex-layout",
  "vortex-scalar",
+ "vortex-scan",
 ]
 
 [[package]]
@@ -5199,6 +5200,7 @@ dependencies = [
  "vortex-expr",
  "vortex-flatbuffers",
  "vortex-ipc",
+ "vortex-scan",
 ]
 
 [[package]]
@@ -5307,6 +5309,17 @@ dependencies = [
  "vortex-error",
  "vortex-flatbuffers",
  "vortex-proto",
+]
+
+[[package]]
+name = "vortex-scan"
+version = "0.21.1"
+dependencies = [
+ "arrow-buffer",
+ "vortex-array",
+ "vortex-dtype",
+ "vortex-error",
+ "vortex-expr",
 ]
 
 [[package]]
