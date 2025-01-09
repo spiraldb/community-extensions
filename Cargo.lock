@@ -403,6 +403,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-once-cell"
+version = "0.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4288f83726785267c6f2ef073a3d83dc3f9b81464e9f99898240cced85fce35a"
+
+[[package]]
 name = "async-task"
 version = "4.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5097,6 +5103,7 @@ dependencies = [
  "arrow-array",
  "arrow-buffer",
  "arrow-schema",
+ "async-trait",
  "bytes",
  "flatbuffers",
  "futures",
@@ -5197,10 +5204,12 @@ name = "vortex-layout"
 version = "0.21.1"
 dependencies = [
  "arrow-buffer",
+ "async-once-cell",
+ "async-trait",
  "bytes",
  "flatbuffers",
+ "futures",
  "itertools 0.14.0",
- "rstest",
  "vortex-array",
  "vortex-buffer",
  "vortex-dtype",
@@ -5208,6 +5217,7 @@ dependencies = [
  "vortex-expr",
  "vortex-flatbuffers",
  "vortex-ipc",
+ "vortex-scalar",
  "vortex-scan",
 ]
 
@@ -5324,7 +5334,10 @@ dependencies = [
 name = "vortex-scan"
 version = "0.21.1"
 dependencies = [
+ "async-trait",
+ "rstest",
  "vortex-array",
+ "vortex-buffer",
  "vortex-dtype",
  "vortex-error",
  "vortex-expr",
