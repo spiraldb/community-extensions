@@ -4918,6 +4918,7 @@ dependencies = [
  "arrow-buffer",
  "bytes",
  "divan",
+ "log",
  "vortex-error",
 ]
 
@@ -5115,8 +5116,8 @@ dependencies = [
 name = "vortex-flatbuffers"
 version = "0.21.1"
 dependencies = [
- "bytes",
  "flatbuffers",
+ "vortex-buffer",
 ]
 
 [[package]]
