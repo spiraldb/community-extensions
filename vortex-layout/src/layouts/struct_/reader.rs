@@ -1,12 +1,8 @@
-use async_trait::async_trait;
-use vortex_array::{ArrayData, ContextRef};
+use vortex_array::ContextRef;
 use vortex_error::{vortex_panic, VortexResult};
-use vortex_expr::ExprRef;
-use vortex_scan::{AsyncEvaluator, RowMask};
 
 use crate::layouts::struct_::StructLayout;
-use crate::reader::LayoutReader;
-use crate::{LayoutData, LayoutEncoding};
+use crate::{LayoutData, LayoutEncoding, LayoutReader};
 
 #[derive(Debug)]
 pub struct StructScan {
@@ -25,19 +21,8 @@ impl StructScan {
     }
 }
 
-#[async_trait(?Send)]
-impl AsyncEvaluator for StructScan {
-    async fn evaluate(self: &Self, _row_mask: RowMask, _expr: ExprRef) -> VortexResult<ArrayData> {
-        todo!()
-    }
-}
-
 impl LayoutReader for StructScan {
     fn layout(&self) -> &LayoutData {
         &self.layout
-    }
-
-    fn evaluator(&self) -> &dyn AsyncEvaluator {
-        self
     }
 }
