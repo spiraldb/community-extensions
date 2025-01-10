@@ -5111,6 +5111,8 @@ dependencies = [
  "futures-executor",
  "futures-util",
  "itertools 0.14.0",
+ "pin-project-lite",
+ "rayon",
  "rstest",
  "tokio",
  "tracing",
@@ -5217,7 +5219,6 @@ dependencies = [
  "vortex-error",
  "vortex-expr",
  "vortex-flatbuffers",
- "vortex-ipc",
  "vortex-scalar",
  "vortex-scan",
 ]
@@ -5335,7 +5336,6 @@ dependencies = [
 name = "vortex-scan"
 version = "0.21.1"
 dependencies = [
- "async-trait",
  "rstest",
  "vortex-array",
  "vortex-buffer",
