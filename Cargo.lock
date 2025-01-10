@@ -5073,6 +5073,7 @@ dependencies = [
  "vortex-buffer",
  "vortex-dtype",
  "vortex-error",
+ "vortex-expr",
  "vortex-proto",
  "vortex-scalar",
 ]
