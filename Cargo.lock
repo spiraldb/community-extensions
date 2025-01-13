@@ -5003,6 +5003,7 @@ dependencies = [
  "vortex-runend-bool",
  "vortex-sampling-compressor",
  "vortex-scalar",
+ "vortex-scan",
  "vortex-zigzag",
 ]
 
@@ -5253,6 +5254,7 @@ dependencies = [
  "futures-executor",
  "futures-util",
  "itertools 0.14.0",
+ "log",
  "pin-project-lite",
  "rayon",
  "rstest",
