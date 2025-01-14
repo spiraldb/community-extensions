@@ -20,8 +20,7 @@ pub struct StructReader {
     segments: Arc<dyn AsyncSegmentReader>,
 
     field_readers: Arc<[OnceLock<Arc<dyn LayoutReader>>]>,
-    field_lookup: HashMap<FieldName, usize>,
-
+    field_lookup: Option<HashMap<FieldName, usize>>,
     expr_cache: Arc<RwLock<HashMap<ExactExpr, Arc<PartitionedExpr>>>>,
 }
 
@@ -40,14 +39,17 @@ impl StructReader {
             vortex_panic!("Mismatched dtype {} for struct layout", dtype);
         };
 
-        let field_readers = struct_dt.names().iter().map(|_| OnceLock::new()).collect();
+        let field_readers = (0..layout.nchildren()).map(|_| OnceLock::new()).collect();
 
-        let field_lookup = struct_dt
-            .names()
-            .iter()
-            .enumerate()
-            .map(|(i, name)| (name.clone(), i))
-            .collect();
+        // NOTE: This number is arbitrary and likely depends on the longest common prefix of field names
+        let field_lookup = (layout.nchildren() > 80).then(|| {
+            struct_dt
+                .names()
+                .iter()
+                .enumerate()
+                .map(|(i, n)| (n.clone(), i))
+                .collect()
+        });
 
         // This is where we need to do some complex things with the scan in order to split it into
         // different scans for different fields.
@@ -70,9 +72,11 @@ impl StructReader {
 
     /// Return the child reader for the chunk.
     pub(crate) fn child(&self, name: &FieldName) -> VortexResult<&Arc<dyn LayoutReader>> {
-        let idx = *self
+        let idx = self
             .field_lookup
-            .get(name)
+            .as_ref()
+            .and_then(|lookup| lookup.get(name).copied())
+            .or_else(|| self.struct_dtype().find_name(name))
             .ok_or_else(|| vortex_err!("Field {} not found in struct layout", name))?;
 
         // TODO: think about a Hashmap<FieldName, OnceLock<Arc<dyn LayoutReader>>> for large |fields|.
