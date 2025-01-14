@@ -16,7 +16,7 @@ use crate::ExprEvaluator;
 impl ExprEvaluator for StructReader {
     async fn evaluate_expr(&self, row_mask: RowMask, expr: ExprRef) -> VortexResult<ArrayData> {
         // Partition the expression into expressions that can be evaluated over individual fields
-        let partitioned = partition(expr, self.struct_dtype())?;
+        let partitioned = partition(expr.clone(), self.struct_dtype())?;
         let field_readers: Vec<_> = partitioned
             .partitions
             .iter()
@@ -49,7 +49,6 @@ impl ExprEvaluator for StructReader {
         )?
         .into_array();
 
-        // Recombine the partitioned expressions into a single expression
         partitioned.root.evaluate(&root_scope)
     }
 }
