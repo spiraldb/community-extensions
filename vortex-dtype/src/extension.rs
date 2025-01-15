@@ -58,24 +58,12 @@ impl From<&[u8]> for ExtMetadata {
 }
 
 /// A type descriptor for an extension type
-#[derive(Debug, Clone, PartialOrd, Eq)]
+#[derive(Debug, Clone, PartialOrd, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct ExtDType {
     id: ExtID,
     storage_dtype: Arc<DType>,
     metadata: Option<ExtMetadata>,
-}
-
-impl PartialEq for ExtDType {
-    fn eq(&self, other: &Self) -> bool {
-        self.id == other.id
-    }
-}
-
-impl std::hash::Hash for ExtDType {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.id.hash(state);
-    }
 }
 
 impl ExtDType {
@@ -147,5 +135,14 @@ impl ExtDType {
     #[inline]
     pub fn metadata(&self) -> Option<&ExtMetadata> {
         self.metadata.as_ref()
+    }
+
+    /// Check if `self` and `other` are equal, ignoring the storage nullability
+    pub fn eq_ignore_nullability(&self, other: &Self) -> bool {
+        self.id() == other.id()
+            && self.metadata() == other.metadata()
+            && self
+                .storage_dtype()
+                .eq_ignore_nullability(other.storage_dtype())
     }
 }
