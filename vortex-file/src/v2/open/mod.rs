@@ -49,7 +49,7 @@ impl VortexOpenOptions {
     pub fn new(ctx: ContextRef) -> Self {
         Self {
             ctx,
-            layout_ctx: LayoutContextRef::default(),
+            layout_ctx: Default::default(),
             file_size: None,
             file_layout: None,
             initial_read_size: INITIAL_READ_SIZE,
