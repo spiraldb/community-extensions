@@ -19,10 +19,10 @@ use vortex_expr::{ident, ExprRef};
 use vortex_layout::{ExprEvaluator, LayoutReader};
 use vortex_scan::{RowMask, Scanner};
 
-use crate::v2::exec::ExecDriver;
-use crate::v2::io::IoDriver;
-use crate::v2::segments::channel::SegmentChannel;
-use crate::v2::FileLayout;
+use crate::exec::ExecDriver;
+use crate::io::IoDriver;
+use crate::segments::channel::SegmentChannel;
+use crate::FileLayout;
 
 /// A Vortex file ready for reading.
 ///
@@ -170,7 +170,6 @@ impl<I: IoDriver> VortexFile<I> {
             simplify_typed(projection, dt.clone())?,
             filter.map(|f| simplify_typed(f, dt)).transpose()?,
         )?);
-
         let result_dtype = scanner.result_dtype().clone();
 
         // Set up a segment channel to collect segment requests from the execution stream.
