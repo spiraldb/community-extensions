@@ -11,8 +11,7 @@ use vortex_array::validity::{LogicalValidity, Validity, ValidityMetadata, Validi
 use vortex_array::variants::{PrimitiveArrayTrait, VariantsVTable};
 use vortex_array::visitor::{ArrayVisitor, VisitorVTable};
 use vortex_array::{
-    impl_encoding, ArrayDType, ArrayData, ArrayLen, Canonical, DeserializeMetadata, IntoCanonical,
-    RkyvMetadata,
+    impl_encoding, ArrayDType, ArrayData, ArrayLen, Canonical, IntoCanonical, RkyvMetadata,
 };
 use vortex_buffer::ByteBuffer;
 use vortex_dtype::{DType, NativePType, PType};
@@ -161,14 +160,6 @@ impl BitPackedArray {
         )
     }
 
-    fn metadata(&self) -> BitPackedMetadata {
-        // SAFETY: metadata is validated in ValidateVTable
-        unsafe {
-            RkyvMetadata::<BitPackedMetadata>::deserialize_unchecked(self.as_ref().metadata_bytes())
-                .0
-        }
-    }
-
     #[inline]
     pub fn packed(&self) -> &ByteBuffer {
         self.as_ref()
@@ -288,13 +279,7 @@ impl VisitorVTable<BitPackedArray> for BitPackedEncoding {
 
 impl StatisticsVTable<BitPackedArray> for BitPackedEncoding {}
 
-impl ValidateVTable<BitPackedArray> for BitPackedEncoding {
-    fn validate(&self, array: &BitPackedArray) -> VortexResult<()> {
-        // Validate the metadata
-        RkyvMetadata::<BitPackedMetadata>::deserialize(array.as_ref().metadata_bytes())?;
-        Ok(())
-    }
-}
+impl ValidateVTable<BitPackedArray> for BitPackedEncoding {}
 
 impl VariantsVTable<BitPackedArray> for BitPackedEncoding {
     fn as_primitive_array<'a>(

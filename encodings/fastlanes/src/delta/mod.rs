@@ -9,8 +9,8 @@ use vortex_array::validity::{LogicalValidity, Validity, ValidityMetadata, Validi
 use vortex_array::variants::{PrimitiveArrayTrait, VariantsVTable};
 use vortex_array::visitor::{ArrayVisitor, VisitorVTable};
 use vortex_array::{
-    impl_encoding, ArrayDType, ArrayData, ArrayLen, Canonical, DeserializeMetadata, IntoArrayData,
-    IntoCanonical, RkyvMetadata,
+    impl_encoding, ArrayDType, ArrayData, ArrayLen, Canonical, IntoArrayData, IntoCanonical,
+    RkyvMetadata,
 };
 use vortex_buffer::Buffer;
 use vortex_dtype::{match_each_unsigned_integer_ptype, NativePType};
@@ -169,13 +169,6 @@ impl DeltaArray {
         Ok(delta)
     }
 
-    fn metadata(&self) -> DeltaMetadata {
-        // SAFETY: metadata is validated in ValidateVTable
-        unsafe {
-            RkyvMetadata::<DeltaMetadata>::deserialize_unchecked(self.as_ref().metadata_bytes()).0
-        }
-    }
-
     #[inline]
     pub fn bases(&self) -> ArrayData {
         self.as_ref()
@@ -229,13 +222,8 @@ impl DeltaArray {
     }
 }
 
-impl ValidateVTable<DeltaArray> for DeltaEncoding {
-    fn validate(&self, array: &DeltaArray) -> VortexResult<()> {
-        // Validate the metadata
-        RkyvMetadata::<DeltaMetadata>::deserialize(array.as_ref().metadata_bytes())?;
-        Ok(())
-    }
-}
+impl ValidateVTable<DeltaArray> for DeltaEncoding {}
+
 impl VariantsVTable<DeltaArray> for DeltaEncoding {
     fn as_primitive_array<'a>(&self, array: &'a DeltaArray) -> Option<&'a dyn PrimitiveArrayTrait> {
         Some(array)
