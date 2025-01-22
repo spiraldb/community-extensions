@@ -1,6 +1,5 @@
 use std::any::Any;
 use std::fmt::{Debug, Display, Formatter};
-use std::sync::Arc;
 
 use arrow_array::ArrayRef;
 use vortex_error::{vortex_bail, vortex_panic, VortexResult};
@@ -12,10 +11,7 @@ use crate::validate::ValidateVTable;
 use crate::validity::{LogicalValidity, ValidityVTable};
 use crate::variants::VariantsVTable;
 use crate::visitor::{ArrayVisitor, VisitorVTable};
-use crate::{
-    ArrayData, ArrayMetadata, Canonical, IntoCanonicalVTable, MetadataVTable,
-    TrySerializeArrayMetadata,
-};
+use crate::{ArrayData, Canonical, EmptyMetadata, IntoCanonicalVTable};
 
 /// An encoding of an array that we cannot interpret.
 ///
@@ -40,6 +36,10 @@ impl EncodingVTable for OpaqueEncoding {
     fn as_any(&self) -> &dyn Any {
         self
     }
+
+    fn metadata_display(&self, _array: &ArrayData, f: &mut Formatter<'_>) -> std::fmt::Result {
+        EmptyMetadata.fmt(f)
+    }
 }
 
 impl IntoCanonicalVTable for OpaqueEncoding {
@@ -59,12 +59,6 @@ impl IntoCanonicalVTable for OpaqueEncoding {
 }
 
 impl ComputeVTable for OpaqueEncoding {}
-
-impl MetadataVTable for OpaqueEncoding {
-    fn load_metadata(&self, _metadata: Option<&[u8]>) -> VortexResult<Arc<dyn ArrayMetadata>> {
-        Ok(Arc::new(OpaqueMetadata))
-    }
-}
 
 impl StatisticsVTable<ArrayData> for OpaqueEncoding {}
 
@@ -92,30 +86,5 @@ impl VisitorVTable<ArrayData> for OpaqueEncoding {
             "OpaqueEncoding: into_canonical cannot be called for opaque array ({})",
             self.0
         )
-    }
-}
-
-#[derive(Debug)]
-pub struct OpaqueMetadata;
-
-impl TrySerializeArrayMetadata for OpaqueMetadata {
-    fn try_serialize_metadata(&self) -> VortexResult<Arc<[u8]>> {
-        vortex_bail!("OpaqueMetadata cannot be serialized")
-    }
-}
-
-impl Display for OpaqueMetadata {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "OpaqueMetadata")
-    }
-}
-
-impl ArrayMetadata for OpaqueMetadata {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
-    fn as_any_arc(self: Arc<Self>) -> Arc<dyn Any + Send + Sync> {
-        self
     }
 }

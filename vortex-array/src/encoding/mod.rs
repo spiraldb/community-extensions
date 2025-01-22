@@ -10,7 +10,7 @@ use crate::validate::ValidateVTable;
 use crate::validity::ValidityVTable;
 use crate::variants::VariantsVTable;
 use crate::visitor::VisitorVTable;
-use crate::{ArrayData, ArrayMetadata, IntoCanonicalVTable, MetadataVTable};
+use crate::{ArrayData, DeserializeMetadata, IntoCanonicalVTable, SerializeMetadata};
 
 pub mod opaque;
 
@@ -65,7 +65,7 @@ pub trait Encoding: 'static {
     const ID: EncodingId;
 
     type Array;
-    type Metadata: ArrayMetadata;
+    type Metadata: SerializeMetadata + for<'m> DeserializeMetadata<'m> + Display;
 }
 
 pub type EncodingRef = &'static dyn EncodingVTable;
@@ -77,7 +77,6 @@ pub trait EncodingVTable:
     + Send
     + Debug
     + IntoCanonicalVTable
-    + MetadataVTable
     + ComputeVTable
     + StatisticsVTable<ArrayData>
     + ValidateVTable<ArrayData>
@@ -88,6 +87,8 @@ pub trait EncodingVTable:
     fn id(&self) -> EncodingId;
 
     fn as_any(&self) -> &dyn Any;
+
+    fn metadata_display(&self, array: &ArrayData, f: &mut Formatter<'_>) -> std::fmt::Result;
 }
 
 impl PartialEq for dyn EncodingVTable + '_ {

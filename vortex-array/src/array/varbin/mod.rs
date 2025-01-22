@@ -1,24 +1,27 @@
 use std::fmt::{Debug, Display};
 
 use num_traits::{AsPrimitive, PrimInt};
+use rkyv::from_bytes;
 use serde::{Deserialize, Serialize};
 pub use stats::compute_varbin_statistics;
 use vortex_buffer::ByteBuffer;
 use vortex_dtype::{match_each_native_ptype, DType, NativePType, Nullability, PType};
 use vortex_error::{
-    vortex_bail, vortex_err, vortex_panic, VortexExpect as _, VortexResult, VortexUnwrap as _,
+    vortex_bail, vortex_err, vortex_panic, VortexError, VortexExpect as _, VortexResult,
+    VortexUnwrap as _,
 };
 use vortex_scalar::Scalar;
 
 use crate::array::primitive::PrimitiveArray;
 use crate::array::varbin::builder::VarBinBuilder;
+use crate::array::{StructMetadata, VarBinViewArray, VarBinViewMetadata};
 use crate::compute::scalar_at;
 use crate::encoding::ids;
 use crate::stats::StatsSet;
 use crate::validate::ValidateVTable;
 use crate::validity::{Validity, ValidityMetadata};
 use crate::variants::PrimitiveArrayTrait;
-use crate::{impl_encoding, ArrayDType, ArrayData, ArrayLen};
+use crate::{impl_encoding, ArrayDType, ArrayData, ArrayLen, DeserializeMetadata, RkyvMetadata};
 
 mod accessor;
 mod array;
@@ -29,9 +32,16 @@ mod compute;
 mod stats;
 mod variants;
 
-impl_encoding!("vortex.varbin", ids::VAR_BIN, VarBin);
+impl_encoding!(
+    "vortex.varbin",
+    ids::VAR_BIN,
+    VarBin,
+    RkyvMetadata<VarBinMetadata>
+);
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Serialize, Deserialize, rkyv::Archive, rkyv::Serialize, rkyv::Deserialize,
+)]
 pub struct VarBinMetadata {
     pub(crate) validity: ValidityMetadata,
     pub(crate) offsets_ptype: PType,
@@ -83,11 +93,18 @@ impl VarBinArray {
         Self::try_from_parts(
             dtype,
             length,
-            metadata,
+            RkyvMetadata(metadata),
             Some([bytes].into()),
             Some(children.into()),
             StatsSet::default(),
         )
+    }
+
+    fn metadata(&self) -> VarBinMetadata {
+        // SAFETY: metadata is validated in the ValidateVTable
+        unsafe {
+            RkyvMetadata::<VarBinMetadata>::deserialize_unchecked(self.as_ref().metadata_bytes()).0
+        }
     }
 
     #[inline]
@@ -226,7 +243,12 @@ impl VarBinArray {
     }
 }
 
-impl ValidateVTable<VarBinArray> for VarBinEncoding {}
+impl ValidateVTable<VarBinArray> for VarBinEncoding {
+    fn validate(&self, array: &VarBinArray) -> VortexResult<()> {
+        RkyvMetadata::<VarBinMetadata>::deserialize(array.as_ref().metadata_bytes())?;
+        Ok(())
+    }
+}
 
 impl From<Vec<&[u8]>> for VarBinArray {
     fn from(value: Vec<&[u8]>) -> Self {

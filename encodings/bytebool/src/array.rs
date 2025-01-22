@@ -1,4 +1,4 @@
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 
 use arrow_buffer::BooleanBuffer;
 use serde::{Deserialize, Serialize};
@@ -9,25 +9,32 @@ use vortex_array::validate::ValidateVTable;
 use vortex_array::validity::{LogicalValidity, Validity, ValidityMetadata, ValidityVTable};
 use vortex_array::variants::{BoolArrayTrait, VariantsVTable};
 use vortex_array::visitor::{ArrayVisitor, VisitorVTable};
-use vortex_array::{impl_encoding, ArrayLen, Canonical, IntoCanonical};
+use vortex_array::{
+    impl_encoding, ArrayLen, Canonical, DeserializeMetadata, IntoCanonical, SerdeMetadata,
+};
 use vortex_buffer::ByteBuffer;
 use vortex_dtype::DType;
 use vortex_error::{VortexExpect as _, VortexResult};
 
-impl_encoding!("vortex.bytebool", ids::BYTE_BOOL, ByteBool);
+impl_encoding!(
+    "vortex.bytebool",
+    ids::BYTE_BOOL,
+    ByteBool,
+    SerdeMetadata<ByteBoolMetadata>
+);
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ByteBoolMetadata {
     validity: ValidityMetadata,
 }
 
-impl Display for ByteBoolMetadata {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        Debug::fmt(self, f)
-    }
-}
-
 impl ByteBoolArray {
+    fn metadata(&self) -> ByteBoolMetadata {
+        SerdeMetadata::<ByteBoolMetadata>::deserialize(self.as_ref().metadata_bytes())
+            .vortex_expect("ByteBoolMetadata metadata")
+            .0
+    }
+
     pub fn validity(&self) -> Validity {
         self.metadata().validity.to_validity(|| {
             self.as_ref()
@@ -38,12 +45,13 @@ impl ByteBoolArray {
 
     pub fn try_new(buffer: ByteBuffer, validity: Validity) -> VortexResult<Self> {
         let length = buffer.len();
+
         Self::try_from_parts(
             DType::Bool(validity.nullability()),
             length,
-            ByteBoolMetadata {
+            SerdeMetadata(ByteBoolMetadata {
                 validity: validity.to_metadata(length)?,
-            },
+            }),
             Some([buffer.into_byte_buffer()].into()),
             validity.into_array().map(|v| [v].into()),
             StatsSet::default(),
@@ -140,9 +148,9 @@ mod tests {
     fn test_bytebool_metadata() {
         check_metadata(
             "bytebool.metadata",
-            ByteBoolMetadata {
+            SerdeMetadata(ByteBoolMetadata {
                 validity: ValidityMetadata::AllValid,
-            },
+            }),
         );
     }
 
