@@ -5233,6 +5233,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_test",
+ "static_assertions",
  "vortex-buffer",
  "vortex-error",
  "vortex-flatbuffers",
