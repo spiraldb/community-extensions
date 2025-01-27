@@ -3,6 +3,7 @@ name: Python & Rust docs
 on:
   push:
     branches: [ develop ]
+  workflow_dispatch: { }
 
 permissions:
   actions: read
@@ -28,6 +29,7 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: docs/_build/html
+
   deploy:
     environment:
       name: github-pages
@@ -38,3 +40,15 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: github-pages
+          path: docs
+
+      # Note, since we use an API token we run it in a separate job that doesn't run any repository code.
+      - name: Upload artifacts to CloudFlare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          command: pages deploy docs --project-name=vortex-docs
