@@ -4,8 +4,10 @@ mod compare;
 mod invert;
 mod search_sorted;
 
+use std::sync::Arc;
+
 use vortex_error::VortexResult;
-use vortex_mask::Mask;
+use vortex_mask::{Mask, MaskValues};
 use vortex_scalar::Scalar;
 
 use crate::array::constant::ConstantArray;

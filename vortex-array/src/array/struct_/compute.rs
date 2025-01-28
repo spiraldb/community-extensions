@@ -1,6 +1,8 @@
+use std::sync::Arc;
+
 use itertools::Itertools;
 use vortex_error::VortexResult;
-use vortex_mask::Mask;
+use vortex_mask::{Mask, MaskValues};
 use vortex_scalar::Scalar;
 
 use crate::array::struct_::StructArray;

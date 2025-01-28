@@ -1,6 +1,8 @@
 use std::cmp::Ordering;
 use std::fmt::Debug;
+use std::sync::Arc;
 
+use arrow_buffer::BooleanBuffer;
 use itertools::Itertools as _;
 use num_traits::{AsPrimitive, NumCast, ToPrimitive};
 use serde::{Deserialize, Serialize};
@@ -8,7 +10,7 @@ use vortex_buffer::BufferMut;
 use vortex_dtype::Nullability::NonNullable;
 use vortex_dtype::{match_each_integer_ptype, DType, NativePType, PType};
 use vortex_error::{vortex_bail, VortexExpect, VortexResult};
-use vortex_mask::Mask;
+use vortex_mask::{AllOr, Mask, MaskValues};
 use vortex_scalar::Scalar;
 
 use crate::aliases::hash_map::HashMap;
@@ -210,18 +212,20 @@ impl Patches {
 
     /// Filter the patches by a mask, resulting in new patches for the filtered array.
     pub fn filter(&self, mask: &Mask) -> VortexResult<Option<Self>> {
-        if mask.true_count() == 0 {
-            return Ok(None);
+        match mask.indices() {
+            AllOr::All => Ok(Some(self.clone())),
+            AllOr::None => Ok(None),
+            AllOr::Some(mask_indices) => {
+                let flat_indices = self.indices().clone().into_primitive()?;
+                match_each_integer_ptype!(flat_indices.ptype(), |$I| {
+                    filter_patches_with_mask(
+                        flat_indices.as_slice::<$I>(),
+                        self.values(),
+                        mask_indices,
+                    )
+                })
+            }
         }
-
-        let flat_indices = self.indices().clone().into_primitive()?;
-        match_each_integer_ptype!(flat_indices.ptype(), |$I| {
-            filter_patches_with_mask(
-                flat_indices.as_slice::<$I>(),
-                self.values(),
-                mask
-            )
-        })
     }
 
     /// Slice the patches by a range of the patched array.
@@ -387,10 +391,11 @@ impl Patches {
 fn filter_patches_with_mask<T: ToPrimitive + Copy + Ord>(
     patch_indices: &[T],
     patch_values: &ArrayData,
-    mask: &Mask,
+    mask_indices: &[usize],
 ) -> VortexResult<Option<Patches>> {
-    let mut new_patch_indices = BufferMut::<u64>::with_capacity(mask.true_count());
-    let mut new_mask_indices = Vec::with_capacity(mask.true_count());
+    let true_count = mask_indices.len();
+    let mut new_patch_indices = BufferMut::<u64>::with_capacity(true_count);
+    let mut new_mask_indices = Vec::with_capacity(true_count);
 
     // Attempt to move the window by `STRIDE` elements on each iteration. This assumes that
     // the patches are relatively sparse compared to the overall mask, and so many indices in the
@@ -400,9 +405,7 @@ fn filter_patches_with_mask<T: ToPrimitive + Copy + Ord>(
     let mut mask_idx = 0usize;
     let mut true_idx = 0usize;
 
-    let mask_indices = mask.indices();
-
-    while mask_idx < patch_indices.len() && true_idx < mask.true_count() {
+    while mask_idx < patch_indices.len() && true_idx < true_count {
         // NOTE: we are searching for overlaps between sorted, unaligned indices in `patch_indices`
         //  and `mask_indices`. We assume that Patches are sparse relative to the global space of
         //  the mask (which covers both patch and non-patch values of the parent array), and so to
@@ -464,7 +467,7 @@ fn filter_patches_with_mask<T: ToPrimitive + Copy + Ord>(
     )?;
 
     Ok(Some(Patches::new(
-        mask.true_count(),
+        true_count,
         new_patch_indices,
         new_patch_values,
     )))

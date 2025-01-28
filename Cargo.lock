@@ -5141,6 +5141,7 @@ dependencies = [
  "vortex-buffer",
  "vortex-dtype",
  "vortex-error",
+ "vortex-mask",
  "vortex-scalar",
 ]
 
