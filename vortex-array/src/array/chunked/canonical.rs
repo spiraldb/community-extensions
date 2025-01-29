@@ -13,10 +13,7 @@ use crate::arrow::IntoArrowArray;
 use crate::compute::{scalar_at, slice, try_cast};
 use crate::validity::Validity;
 use crate::vtable::CanonicalVTable;
-use crate::{
-    ArrayDType, ArrayData, ArrayLen, ArrayValidity, Canonical, IntoArrayData, IntoArrayVariant,
-    IntoCanonical,
-};
+use crate::{ArrayData, Canonical, IntoArrayData, IntoArrayVariant};
 
 impl CanonicalVTable<ChunkedArray> for ChunkedEncoding {
     fn into_canonical(&self, array: ChunkedArray) -> VortexResult<Canonical> {
@@ -281,7 +278,7 @@ mod tests {
     use crate::compute::{scalar_at, slice};
     use crate::validity::Validity;
     use crate::variants::StructArrayTrait;
-    use crate::{ArrayDType, ArrayLen, IntoArrayData, IntoArrayVariant, ToArrayData};
+    use crate::{IntoArrayData, IntoArrayVariant};
 
     fn stringview_array() -> VarBinViewArray {
         VarBinViewArray::from_iter_str(["foo", "bar", "baz", "quak"])
@@ -320,7 +317,7 @@ mod tests {
         let dtype = struct_array.dtype().clone();
         let chunked = ChunkedArray::try_new(
             vec![
-                ChunkedArray::try_new(vec![struct_array.to_array()], dtype.clone())
+                ChunkedArray::try_new(vec![struct_array.clone().into_array()], dtype.clone())
                     .unwrap()
                     .into_array(),
             ],

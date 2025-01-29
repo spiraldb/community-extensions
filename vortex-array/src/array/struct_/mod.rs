@@ -8,7 +8,7 @@ use vortex_mask::Mask;
 
 use crate::arrow::IntoArrowArray;
 use crate::encoding::ids;
-use crate::stats::{ArrayStatistics, Stat, StatsSet};
+use crate::stats::{Stat, StatsSet};
 use crate::validity::{Validity, ValidityMetadata};
 use crate::variants::StructArrayTrait;
 use crate::visitor::ArrayVisitor;
@@ -17,8 +17,7 @@ use crate::vtable::{
     VisitorVTable,
 };
 use crate::{
-    impl_encoding, ArrayDType, ArrayData, ArrayLen, Canonical, DeserializeMetadata, IntoArrayData,
-    IntoCanonical, RkyvMetadata,
+    impl_encoding, ArrayData, Canonical, DeserializeMetadata, IntoArrayData, RkyvMetadata,
 };
 
 mod compute;
@@ -246,7 +245,7 @@ mod test {
     use crate::array::BoolArray;
     use crate::validity::Validity;
     use crate::variants::StructArrayTrait;
-    use crate::{ArrayLen, IntoArrayData};
+    use crate::IntoArrayData;
 
     #[test]
     fn test_project() {

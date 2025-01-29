@@ -1,5 +1,6 @@
 //! Encodings that enable zero-copy sharing of data with Arrow.
 
+use std::ops::Deref;
 use std::sync::Arc;
 
 use arrow_array::types::*;
@@ -26,10 +27,8 @@ use crate::arrow::{infer_data_type, FromArrowArray, IntoArrowArray};
 use crate::builders::builder_with_capacity;
 use crate::compute::{preferred_arrow_data_type, to_arrow, try_cast};
 use crate::encoding::Encoding;
-use crate::stats::ArrayStatistics;
-use crate::validity::ArrayValidity;
 use crate::variants::{PrimitiveArrayTrait, StructArrayTrait};
-use crate::{ArrayDType, ArrayData, ArrayLen, IntoArrayData};
+use crate::{ArrayData, IntoArrayData};
 
 /// The set of canonical array encodings, also the set of encodings that can be transferred to
 /// Arrow with zero-copy.
@@ -64,6 +63,14 @@ pub enum Canonical {
     List(ListArray),
     VarBinView(VarBinViewArray),
     Extension(ExtensionArray),
+}
+
+impl Deref for Canonical {
+    type Target = ArrayData;
+
+    fn deref(&self) -> &Self::Target {
+        self.as_ref()
+    }
 }
 
 impl Canonical {
@@ -129,16 +136,20 @@ impl Canonical {
     }
 }
 
-/// Support trait for transmuting an array into the canonical encoding for its [vortex_dtype::DType].
-///
-/// This conversion ensures that the array's encoding matches one of the builtin canonical
-/// encodings, each of which has a corresponding [Canonical] variant.
+/// Canonicalize an [`ArrayData`] into one of the [`Canonical`] array forms.
 ///
 /// # Invariants
 ///
 /// The DType of the array will be unchanged by canonicalization.
 pub trait IntoCanonical {
+    /// Canonicalize the array.
     fn into_canonical(self) -> VortexResult<Canonical>;
+}
+
+impl<A: IntoArrayData> IntoCanonical for A {
+    fn into_canonical(self) -> VortexResult<Canonical> {
+        self.into_array().into_canonical()
+    }
 }
 
 /// Trait for types that can be converted from an owned type into an owned array variant.
@@ -164,57 +175,54 @@ pub trait IntoArrayVariant {
 
 impl<T> IntoArrayVariant for T
 where
-    T: AsRef<ArrayData>,
+    T: IntoCanonical,
 {
     fn into_null(self) -> VortexResult<NullArray> {
-        self.as_ref().clone().into_canonical()?.into_null()
+        self.into_canonical()?.into_null()
     }
 
     fn into_bool(self) -> VortexResult<BoolArray> {
-        self.as_ref().clone().into_canonical()?.into_bool()
+        self.into_canonical()?.into_bool()
     }
 
     fn into_primitive(self) -> VortexResult<PrimitiveArray> {
-        self.as_ref().clone().into_canonical()?.into_primitive()
+        self.into_canonical()?.into_primitive()
     }
 
     fn into_struct(self) -> VortexResult<StructArray> {
-        self.as_ref().clone().into_canonical()?.into_struct()
+        self.into_canonical()?.into_struct()
     }
 
     fn into_list(self) -> VortexResult<ListArray> {
-        self.as_ref().clone().into_canonical()?.into_list()
+        self.into_canonical()?.into_list()
     }
 
     fn into_varbinview(self) -> VortexResult<VarBinViewArray> {
-        self.as_ref().clone().into_canonical()?.into_varbinview()
+        self.into_canonical()?.into_varbinview()
     }
 
     fn into_extension(self) -> VortexResult<ExtensionArray> {
-        self.as_ref().clone().into_canonical()?.into_extension()
+        self.into_canonical()?.into_extension()
     }
 }
 
-// TODO(ngates): this turns into `impl ArrayData` when we switch to Deref.
-impl<A: AsRef<ArrayData>> IntoCanonical for A {
+impl IntoCanonical for ArrayData {
     /// Canonicalize an [`ArrayData`] into one of the [`Canonical`] array forms.
     ///
     /// # Invariants
     ///
     /// The DType of the array will be unchanged by canonicalization.
     fn into_canonical(self) -> VortexResult<Canonical> {
-        let this = self.as_ref();
-
         // We only care to know when we canonicalize something non-trivial.
-        if !this.is_canonical() && this.len() > 1 {
-            log::trace!("Canonicalizing array with encoding {:?}", this.encoding());
+        if !self.is_canonical() && self.len() > 1 {
+            log::trace!("Canonicalizing array with encoding {:?}", self.encoding());
         }
 
         #[cfg(feature = "canonical_counter")]
-        this.inc_canonical_counter();
+        self.inc_canonical_counter();
 
-        let canonical = this.encoding().into_canonical(this.clone())?;
-        canonical.inherit_statistics(this.statistics());
+        let canonical = self.encoding().into_canonical(self.clone())?;
+        canonical.as_ref().inherit_statistics(self.statistics());
 
         Ok(canonical)
     }
@@ -298,7 +306,7 @@ mod test {
     use crate::array::{ConstantArray, StructArray};
     use crate::arrow::{infer_data_type, FromArrowArray, IntoArrowArray};
     use crate::compute::to_arrow;
-    use crate::{ArrayDType, ArrayData, IntoArrayData};
+    use crate::{ArrayData, IntoArrayData};
 
     #[test]
     fn test_canonicalize_nested_struct() {

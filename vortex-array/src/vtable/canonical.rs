@@ -4,8 +4,7 @@ use arrow_schema::DataType;
 use vortex_error::{VortexError, VortexExpect, VortexResult};
 
 use crate::encoding::Encoding;
-use crate::stats::ArrayStatistics;
-use crate::{ArrayData, Canonical, IntoCanonical};
+use crate::{ArrayData, Canonical};
 
 /// Encoding VTable for canonicalizing an array.
 #[allow(clippy::wrong_self_convention)]
@@ -13,7 +12,6 @@ pub trait CanonicalVTable<Array> {
     fn into_canonical(&self, array: Array) -> VortexResult<Canonical>;
 }
 
-/// Implement the [CanonicalVTable] for all encodings with arrays implementing [IntoCanonical].
 impl<E: Encoding> CanonicalVTable<ArrayData> for E
 where
     E: CanonicalVTable<E::Array>,

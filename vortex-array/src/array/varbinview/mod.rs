@@ -17,13 +17,10 @@ use vortex_mask::Mask;
 use crate::arrow::{FromArrowArray, IntoArrowArray};
 use crate::encoding::ids;
 use crate::stats::StatsSet;
-use crate::validity::{ArrayValidity, Validity, ValidityMetadata};
+use crate::validity::{Validity, ValidityMetadata};
 use crate::visitor::ArrayVisitor;
 use crate::vtable::{CanonicalVTable, ValidateVTable, ValidityVTable, VisitorVTable};
-use crate::{
-    impl_encoding, ArrayDType, ArrayData, ArrayLen, Canonical, DeserializeMetadata, IntoCanonical,
-    RkyvMetadata,
-};
+use crate::{impl_encoding, ArrayData, Canonical, DeserializeMetadata, RkyvMetadata};
 
 mod accessor;
 mod compute;
@@ -527,8 +524,9 @@ mod test {
     use vortex_scalar::Scalar;
 
     use crate::array::varbinview::{BinaryView, VarBinViewArray};
+    use crate::canonical::IntoCanonical;
     use crate::compute::{scalar_at, slice};
-    use crate::{ArrayLen, Canonical, IntoArrayData, IntoCanonical};
+    use crate::{Canonical, IntoArrayData};
 
     #[test]
     pub fn varbin_view() {

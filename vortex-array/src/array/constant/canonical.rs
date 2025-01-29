@@ -13,7 +13,7 @@ use crate::array::{
 use crate::arrow::IntoArrowArray;
 use crate::validity::Validity;
 use crate::vtable::CanonicalVTable;
-use crate::{ArrayDType, ArrayLen, Canonical, IntoArrayData, IntoCanonical};
+use crate::{Canonical, IntoArrayData, IntoCanonical};
 
 impl CanonicalVTable<ConstantArray> for ConstantEncoding {
     fn into_canonical(&self, array: ConstantArray) -> VortexResult<Canonical> {
@@ -131,15 +131,15 @@ mod tests {
     use vortex_scalar::Scalar;
 
     use crate::array::ConstantArray;
-    use crate::canonical::IntoArrayVariant;
+    use crate::canonical::{IntoArrayVariant, IntoCanonical};
     use crate::compute::scalar_at;
-    use crate::stats::{ArrayStatistics as _, Stat, StatsSet};
-    use crate::{ArrayDType, ArrayLen, IntoArrayData as _, IntoCanonical};
+    use crate::stats::{Stat, StatsSet};
+    use crate::IntoArrayData as _;
 
     #[test]
     fn test_canonicalize_null() {
         let const_null = ConstantArray::new(Scalar::null(DType::Null), 42);
-        let actual = const_null.into_canonical().unwrap().into_null().unwrap();
+        let actual = const_null.into_null().unwrap();
         assert_eq!(actual.len(), 42);
         assert_eq!(scalar_at(actual, 33).unwrap(), Scalar::null(DType::Null));
     }
@@ -165,22 +165,22 @@ mod tests {
         let stats = const_array.statistics().to_set();
 
         let canonical = const_array.into_canonical().unwrap();
-        let canonical_stats = canonical.statistics().to_set();
+        let canonical_stats = canonical.as_ref().statistics().to_set();
 
         let reference = StatsSet::constant(scalar, 4);
         for stat in all::<Stat>() {
             let canonical_stat = canonical_stats
                 .get(stat)
                 .cloned()
-                .map(|sv| Scalar::new(stat.dtype(canonical.dtype()), sv));
+                .map(|sv| Scalar::new(stat.dtype(canonical.as_ref().dtype()), sv));
             let reference_stat = reference
                 .get(stat)
                 .cloned()
-                .map(|sv| Scalar::new(stat.dtype(canonical.dtype()), sv));
+                .map(|sv| Scalar::new(stat.dtype(canonical.as_ref().dtype()), sv));
             let original_stat = stats
                 .get(stat)
                 .cloned()
-                .map(|sv| Scalar::new(stat.dtype(canonical.dtype()), sv));
+                .map(|sv| Scalar::new(stat.dtype(canonical.as_ref().dtype()), sv));
             assert_eq!(canonical_stat, reference_stat);
             assert_eq!(canonical_stat, original_stat);
         }

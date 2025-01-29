@@ -12,10 +12,8 @@ use vortex_error::{vortex_bail, VortexExpect, VortexResult};
 
 use crate::array::{VarBinArray, VarBinEncoding};
 use crate::compute::{try_cast, ToArrowFn};
-use crate::encoding::ArrayEncodingRef;
-use crate::validity::ArrayValidity;
 use crate::variants::PrimitiveArrayTrait;
-use crate::{ArrayDType, IntoArrayVariant, ToArrayData};
+use crate::IntoArrayVariant;
 
 impl ToArrowFn<VarBinArray> for VarBinEncoding {
     fn preferred_arrow_data_type(&self, array: &VarBinArray) -> VortexResult<Option<DataType>> {

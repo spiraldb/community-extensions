@@ -13,7 +13,7 @@ use vortex_array::vtable::{
     CanonicalVTable, StatisticsVTable, ValidateVTable, ValidityVTable, VariantsVTable,
     VisitorVTable,
 };
-use vortex_array::{impl_encoding, ArrayDType, ArrayData, ArrayLen, Canonical, RkyvMetadata};
+use vortex_array::{impl_encoding, ArrayData, Canonical, RkyvMetadata};
 use vortex_buffer::ByteBuffer;
 use vortex_dtype::{DType, NativePType, PType};
 use vortex_error::{vortex_bail, vortex_err, VortexExpect as _, VortexResult};
@@ -300,7 +300,7 @@ mod test {
     use vortex_array::patches::PatchesMetadata;
     use vortex_array::test_harness::check_metadata;
     use vortex_array::validity::ValidityMetadata;
-    use vortex_array::{IntoArrayData, IntoArrayVariant, IntoCanonical, RkyvMetadata};
+    use vortex_array::{IntoArrayData, IntoArrayVariant, RkyvMetadata};
     use vortex_buffer::Buffer;
     use vortex_dtype::PType;
 
@@ -354,8 +354,6 @@ mod test {
         assert!(packed_with_patches.patches().is_some());
         assert_eq!(
             packed_with_patches
-                .into_canonical()
-                .unwrap()
                 .into_primitive()
                 .unwrap()
                 .as_slice::<i32>(),

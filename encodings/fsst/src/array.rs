@@ -3,13 +3,13 @@ use serde::{Deserialize, Serialize};
 use vortex_array::array::{VarBinArray, VarBinEncoding};
 use vortex_array::encoding::{ids, Encoding};
 use vortex_array::stats::StatsSet;
-use vortex_array::validity::{ArrayValidity, Validity};
+use vortex_array::validity::Validity;
 use vortex_array::variants::{BinaryArrayTrait, Utf8ArrayTrait};
 use vortex_array::visitor::ArrayVisitor;
 use vortex_array::vtable::{
     StatisticsVTable, ValidateVTable, ValidityVTable, VariantsVTable, VisitorVTable,
 };
-use vortex_array::{impl_encoding, ArrayDType, ArrayData, ArrayLen, IntoCanonical, SerdeMetadata};
+use vortex_array::{impl_encoding, ArrayData, IntoArrayVariant, SerdeMetadata};
 use vortex_dtype::{DType, Nullability, PType};
 use vortex_error::{vortex_bail, VortexExpect, VortexResult};
 use vortex_mask::Mask;
@@ -161,16 +161,12 @@ impl FSSTArray {
         // canonicalize the symbols child array, so we can view it contiguously
         let symbols_array = self
             .symbols()
-            .into_canonical()
-            .map_err(|err| err.with_context("Failed to canonicalize symbols array"))?
             .into_primitive()
             .map_err(|err| err.with_context("Symbols must be a Primitive Array"))?;
         let symbols = symbols_array.as_slice::<u64>();
 
         let symbol_lengths_array = self
             .symbol_lengths()
-            .into_canonical()
-            .map_err(|err| err.with_context("Failed to canonicalize symbol_lengths array"))?
             .into_primitive()
             .map_err(|err| err.with_context("Symbol lengths must be a Primitive Array"))?;
         let symbol_lengths = symbol_lengths_array.as_slice::<u8>();

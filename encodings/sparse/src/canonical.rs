@@ -2,7 +2,7 @@ use vortex_array::array::{BoolArray, BooleanBuffer, ConstantArray, PrimitiveArra
 use vortex_array::patches::Patches;
 use vortex_array::validity::Validity;
 use vortex_array::vtable::CanonicalVTable;
-use vortex_array::{ArrayDType, ArrayLen, Canonical, IntoCanonical};
+use vortex_array::{Canonical, IntoCanonical};
 use vortex_buffer::buffer;
 use vortex_dtype::{match_each_native_ptype, DType, NativePType, Nullability, PType};
 use vortex_error::{VortexError, VortexResult};
@@ -86,7 +86,7 @@ mod test {
     use rstest::rstest;
     use vortex_array::array::{BoolArray, BooleanBufferBuilder, PrimitiveArray};
     use vortex_array::validity::Validity;
-    use vortex_array::{ArrayDType, IntoArrayData, IntoCanonical};
+    use vortex_array::{IntoArrayData, IntoArrayVariant};
     use vortex_buffer::buffer;
     use vortex_dtype::{DType, Nullability, PType};
     use vortex_error::VortexExpect;
@@ -104,9 +104,9 @@ mod test {
             .into_array();
         let sparse_bools =
             SparseArray::try_new(indices, values, 10, Scalar::from(fill_value)).unwrap();
-        assert_eq!(*sparse_bools.dtype(), DType::Bool(Nullability::Nullable));
+        assert_eq!(sparse_bools.dtype(), &DType::Bool(Nullability::Nullable));
 
-        let flat_bools = sparse_bools.into_canonical().unwrap().into_bool().unwrap();
+        let flat_bools = sparse_bools.into_bool().unwrap();
         let expected = bool_array_from_nullable_vec(
             vec![
                 Some(true),
@@ -171,11 +171,7 @@ mod test {
             DType::Primitive(PType::I32, Nullability::Nullable)
         );
 
-        let flat_ints = sparse_ints
-            .into_canonical()
-            .unwrap()
-            .into_primitive()
-            .unwrap();
+        let flat_ints = sparse_ints.into_primitive().unwrap();
         let expected = PrimitiveArray::from_option_iter([
             Some(0i32),
             None,

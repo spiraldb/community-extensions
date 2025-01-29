@@ -11,7 +11,7 @@ use vortex_array::visitor::ArrayVisitor;
 use vortex_array::vtable::{
     CanonicalVTable, ValidateVTable, ValidityVTable, VariantsVTable, VisitorVTable,
 };
-use vortex_array::{impl_encoding, ArrayLen, Canonical, SerdeMetadata};
+use vortex_array::{impl_encoding, Canonical, SerdeMetadata};
 use vortex_buffer::ByteBuffer;
 use vortex_dtype::DType;
 use vortex_error::{VortexExpect as _, VortexResult};
@@ -134,7 +134,6 @@ impl VisitorVTable<ByteBoolArray> for ByteBoolEncoding {
 #[cfg(test)]
 mod tests {
     use vortex_array::test_harness::check_metadata;
-    use vortex_array::validity::ArrayValidity;
 
     use super::*;
 

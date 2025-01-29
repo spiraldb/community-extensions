@@ -12,8 +12,8 @@ use crate::array::{BoolArray, ConstantArray};
 use crate::arrow::{FromArrowArray, IntoArrowArray};
 use crate::compute::scalar_at;
 use crate::encoding::Encoding;
-use crate::stats::{ArrayStatistics, Stat};
-use crate::{ArrayDType, ArrayData, Canonical, IntoArrayData, IntoArrayVariant, IntoCanonical};
+use crate::stats::Stat;
+use crate::{ArrayData, Canonical, IntoArrayData, IntoArrayVariant};
 
 pub trait FilterFn<Array> {
     /// Filter an array by the provided predicate.
@@ -149,7 +149,7 @@ mod test {
     use super::*;
     use crate::array::{BoolArray, PrimitiveArray};
     use crate::compute::filter::filter;
-    use crate::{IntoArrayData, IntoCanonical};
+    use crate::IntoArrayData;
 
     #[test]
     fn test_filter() {
@@ -162,12 +162,7 @@ mod test {
 
         let filtered = filter(&items, &mask).unwrap();
         assert_eq!(
-            filtered
-                .into_canonical()
-                .unwrap()
-                .into_primitive()
-                .unwrap()
-                .as_slice::<i32>(),
+            filtered.into_primitive().unwrap().as_slice::<i32>(),
             &[0i32, 1i32, 2i32]
         );
     }

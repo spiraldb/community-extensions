@@ -11,9 +11,7 @@ use vortex_array::vtable::{
     CanonicalVTable, StatisticsVTable, ValidateVTable, ValidityVTable, VariantsVTable,
     VisitorVTable,
 };
-use vortex_array::{
-    impl_encoding, ArrayDType, ArrayData, ArrayLen, Canonical, IntoArrayData, RkyvMetadata,
-};
+use vortex_array::{impl_encoding, ArrayData, Canonical, IntoArrayData, RkyvMetadata};
 use vortex_buffer::Buffer;
 use vortex_dtype::{match_each_unsigned_integer_ptype, NativePType};
 use vortex_error::{vortex_bail, vortex_panic, VortexExpect as _, VortexResult};

@@ -1,16 +1,11 @@
 //! The core Vortex macro to create new encodings and array types.
 
 use std::fmt::{Display, Formatter};
+use std::ops::Deref;
 
 use crate::array::StructMetadata;
-use crate::encoding::{ArrayEncodingRef, Encoding, EncodingRef};
-use crate::{ArrayData, ArrayMetadata, ToArrayData};
-
-impl<A: AsRef<ArrayData>> ToArrayData for A {
-    fn to_array(&self) -> ArrayData {
-        self.as_ref().clone()
-    }
-}
+use crate::encoding::{Encoding, EncodingRef};
+use crate::{ArrayData, ArrayMetadata};
 
 /// Macro to generate all the necessary code for a new type of array encoding. Including:
 /// 1. New Array type that implements `AsRef<ArrayData>`, `GetArrayMetadata`, `ToArray`, `IntoArray`, and multiple useful `From`/`TryFrom` implementations.
@@ -76,7 +71,13 @@ macro_rules! impl_encoding {
                 }
             }
 
-            impl $crate::ArrayTrait for [<$Name Array>] {}
+            impl std::ops::Deref for [<$Name Array>] {
+                type Target = $crate::ArrayData;
+
+                fn deref(&self) -> &Self::Target {
+                    &self.0
+                }
+            }
 
             impl TryFrom<$crate::ArrayData> for [<$Name Array>] {
                 type Error = vortex_error::VortexError;
@@ -132,12 +133,6 @@ macro_rules! impl_encoding {
             }
         }
     };
-}
-
-impl<T: AsRef<ArrayData>> ArrayEncodingRef for T {
-    fn encoding(&self) -> EncodingRef {
-        self.as_ref().encoding()
-    }
 }
 
 impl AsRef<ArrayData> for ArrayData {

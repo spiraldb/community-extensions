@@ -12,10 +12,7 @@ use crate::validity::{Validity, ValidityMetadata};
 use crate::variants::BoolArrayTrait;
 use crate::visitor::ArrayVisitor;
 use crate::vtable::{CanonicalVTable, ValidateVTable};
-use crate::{
-    impl_encoding, ArrayLen, Canonical, DeserializeMetadata, IntoArrayData, IntoCanonical,
-    RkyvMetadata,
-};
+use crate::{impl_encoding, Canonical, DeserializeMetadata, IntoArrayData, RkyvMetadata};
 
 pub mod compute;
 mod patch;
@@ -236,7 +233,7 @@ mod tests {
     use crate::compute::{scalar_at, slice};
     use crate::patches::Patches;
     use crate::validity::Validity;
-    use crate::{ArrayLen, IntoArrayData, IntoArrayVariant};
+    use crate::{IntoArrayData, IntoArrayVariant};
 
     #[test]
     fn bool_array() {

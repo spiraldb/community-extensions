@@ -29,10 +29,7 @@ use crate::vtable::{
     CanonicalVTable, StatisticsVTable, ValidateVTable, ValidityVTable, VariantsVTable,
     VisitorVTable,
 };
-use crate::{
-    impl_encoding, ArrayDType, ArrayData, ArrayLen, Canonical, DeserializeMetadata, IntoCanonical,
-    RkyvMetadata,
-};
+use crate::{impl_encoding, ArrayData, Canonical, DeserializeMetadata, RkyvMetadata};
 
 impl_encoding!("vortex.list", ids::LIST, List, RkyvMetadata<ListMetadata>);
 
@@ -245,7 +242,7 @@ mod test {
     use crate::array::PrimitiveArray;
     use crate::compute::{filter, scalar_at};
     use crate::validity::Validity;
-    use crate::{ArrayLen, IntoArrayData};
+    use crate::IntoArrayData;
 
     #[test]
     fn test_empty_list_array() {

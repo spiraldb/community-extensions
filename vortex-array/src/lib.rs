@@ -13,6 +13,8 @@
 //! arrays can be [canonicalized](Canonical) into for ease of access in compute functions.
 //!
 
+use std::ops::Deref;
+
 pub use canonical::*;
 pub use children::*;
 pub use context::*;
@@ -20,11 +22,6 @@ pub use data::*;
 pub use metadata::*;
 pub use paste;
 use vortex_dtype::DType;
-
-use crate::encoding::ArrayEncodingRef;
-use crate::nbytes::ArrayNBytes;
-use crate::stats::ArrayStatistics;
-use crate::validity::ArrayValidity;
 
 pub mod accessor;
 pub mod aliases;
@@ -82,36 +79,9 @@ impl Iterator for ArrayChildrenIterator {
     }
 }
 
-pub trait ToArrayData {
-    fn to_array(&self) -> ArrayData;
-}
-
 /// Consume `self` and turn it into an [`ArrayData`] infallibly.
 ///
 /// Implementation of this array should never fail.
 pub trait IntoArrayData {
     fn into_array(self) -> ArrayData;
-}
-
-/// Collects together the behavior of an array.
-pub trait ArrayTrait:
-    AsRef<ArrayData>
-    + ArrayEncodingRef
-    + ArrayDType
-    + ArrayLen
-    + ArrayNBytes
-    + ArrayValidity
-    + ArrayStatistics
-{
-}
-
-pub trait ArrayDType {
-    // TODO(ngates): move into ArrayTrait?
-    fn dtype(&self) -> &DType;
-}
-
-pub trait ArrayLen {
-    fn len(&self) -> usize;
-
-    fn is_empty(&self) -> bool;
 }

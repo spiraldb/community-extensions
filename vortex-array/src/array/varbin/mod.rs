@@ -21,7 +21,7 @@ use crate::stats::StatsSet;
 use crate::validity::{Validity, ValidityMetadata};
 use crate::variants::PrimitiveArrayTrait;
 use crate::vtable::ValidateVTable;
-use crate::{impl_encoding, ArrayDType, ArrayData, ArrayLen, DeserializeMetadata, RkyvMetadata};
+use crate::{impl_encoding, ArrayData, DeserializeMetadata, RkyvMetadata};
 
 mod accessor;
 mod array;

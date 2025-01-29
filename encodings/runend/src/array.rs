@@ -6,16 +6,14 @@ use vortex_array::compute::{
     scalar_at, search_sorted_usize, search_sorted_usize_many, SearchSortedSide,
 };
 use vortex_array::encoding::ids;
-use vortex_array::stats::{ArrayStatistics, StatsSet};
-use vortex_array::validity::ArrayValidity;
+use vortex_array::stats::StatsSet;
 use vortex_array::variants::{BoolArrayTrait, PrimitiveArrayTrait};
 use vortex_array::visitor::ArrayVisitor;
 use vortex_array::vtable::{
     CanonicalVTable, ValidateVTable, ValidityVTable, VariantsVTable, VisitorVTable,
 };
 use vortex_array::{
-    impl_encoding, ArrayDType, ArrayData, ArrayLen, Canonical, IntoArrayData, IntoArrayVariant,
-    SerdeMetadata,
+    impl_encoding, ArrayData, Canonical, IntoArrayData, IntoArrayVariant, SerdeMetadata,
 };
 use vortex_buffer::Buffer;
 use vortex_dtype::{DType, PType};
@@ -231,7 +229,7 @@ impl VisitorVTable<RunEndArray> for RunEndEncoding {
 mod tests {
     use vortex_array::compute::scalar_at;
     use vortex_array::test_harness::check_metadata;
-    use vortex_array::{ArrayDType, ArrayLen, IntoArrayData, SerdeMetadata};
+    use vortex_array::{IntoArrayData, SerdeMetadata};
     use vortex_buffer::buffer;
     use vortex_dtype::{DType, Nullability, PType};
 
