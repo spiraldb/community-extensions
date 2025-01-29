@@ -16,6 +16,7 @@ use vortex_mask::Mask;
 use vortex_scalar::Scalar;
 
 use crate::array::PrimitiveArray;
+use crate::arrow::IntoArrowArray;
 #[cfg(feature = "test-harness")]
 use crate::builders::{ArrayBuilder, ListBuilder};
 use crate::compute::{scalar_at, slice};

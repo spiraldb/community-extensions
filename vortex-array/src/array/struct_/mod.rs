@@ -6,6 +6,7 @@ use vortex_dtype::{DType, Field, FieldName, FieldNames, StructDType};
 use vortex_error::{vortex_bail, vortex_err, vortex_panic, VortexExpect as _, VortexResult};
 use vortex_mask::Mask;
 
+use crate::arrow::IntoArrowArray;
 use crate::encoding::ids;
 use crate::stats::{ArrayStatistics, Stat, StatsSet};
 use crate::validity::{Validity, ValidityMetadata};

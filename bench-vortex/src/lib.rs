@@ -344,10 +344,10 @@ mod test {
     use arrow_array::{ArrayRef as ArrowArrayRef, StructArray as ArrowStructArray};
     use log::LevelFilter;
     use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
-    use vortex::arrow::FromArrowArray;
+    use vortex::arrow::{FromArrowArray, IntoArrowArray};
     use vortex::compress::CompressionStrategy;
     use vortex::sampling_compressor::SamplingCompressor;
-    use vortex::{ArrayData, IntoCanonical};
+    use vortex::ArrayData;
 
     use crate::taxi_data::taxi_data_parquet;
     use crate::{compress_taxi_data, setup_logger};
@@ -370,7 +370,7 @@ mod test {
             let struct_arrow: ArrowStructArray = record_batch.into();
             let arrow_array: ArrowArrayRef = Arc::new(struct_arrow);
             let vortex_array = ArrayData::from_arrow(arrow_array.clone(), false);
-            let vortex_as_arrow = vortex_array.into_arrow().unwrap();
+            let vortex_as_arrow = vortex_array.into_arrow_preferred().unwrap();
             assert_eq!(vortex_as_arrow.deref(), arrow_array.deref());
         }
     }
@@ -391,7 +391,7 @@ mod test {
             let vortex_array = ArrayData::from_arrow(arrow_array.clone(), false);
 
             let compressed = compressor.compress(&vortex_array).unwrap();
-            let compressed_as_arrow = compressed.into_arrow().unwrap();
+            let compressed_as_arrow = compressed.into_arrow_preferred().unwrap();
             assert_eq!(compressed_as_arrow.deref(), arrow_array.deref());
         }
     }

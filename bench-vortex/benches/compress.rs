@@ -29,6 +29,7 @@ use regex::Regex;
 use simplelog::*;
 use tokio::runtime::{Handle, Runtime};
 use vortex::array::{ChunkedArray, StructArray};
+use vortex::arrow::IntoArrowArray;
 use vortex::dtype::FieldName;
 use vortex::error::VortexResult;
 use vortex::file::{ExecutionMode, Scan, VortexOpenOptions, VortexWriteOptions};
@@ -131,7 +132,7 @@ fn vortex_decompress_read(runtime: &Runtime, buf: Bytes) -> VortexResult<Vec<Arr
             .try_collect::<Vec<_>>()
             .await?
             .into_iter()
-            .map(|a| a.into_arrow())
+            .map(|a| a.into_arrow_preferred())
             .collect::<VortexResult<Vec<_>>>()
     })
 }

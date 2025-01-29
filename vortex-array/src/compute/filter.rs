@@ -9,7 +9,7 @@ use vortex_error::{vortex_bail, vortex_panic, VortexError, VortexExpect, VortexR
 use vortex_mask::{Mask, MaskValues};
 
 use crate::array::{BoolArray, ConstantArray};
-use crate::arrow::FromArrowArray;
+use crate::arrow::{FromArrowArray, IntoArrowArray};
 use crate::compute::scalar_at;
 use crate::encoding::Encoding;
 use crate::stats::{ArrayStatistics, Stat};
@@ -110,7 +110,7 @@ fn filter_impl(array: &ArrayData, mask: &Mask) -> VortexResult<ArrayData> {
         array.encoding().id(),
     );
 
-    let array_ref = array.clone().into_arrow()?;
+    let array_ref = array.clone().into_arrow_preferred()?;
     let mask_array = BooleanArray::new(values.boolean_buffer().clone(), None);
     let filtered = arrow_select::filter::filter(array_ref.as_ref(), &mask_array)?;
 

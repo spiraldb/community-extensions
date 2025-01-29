@@ -6,6 +6,7 @@ use vortex_dtype::{DType, ExtDType, ExtID};
 use vortex_error::{VortexExpect as _, VortexResult};
 use vortex_mask::Mask;
 
+use crate::arrow::IntoArrowArray;
 use crate::encoding::ids;
 use crate::stats::{ArrayStatistics as _, Stat, StatsSet};
 use crate::validity::ArrayValidity;

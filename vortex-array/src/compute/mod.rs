@@ -25,6 +25,7 @@ pub use scalar_at::{scalar_at, ScalarAtFn};
 pub use search_sorted::*;
 pub use slice::{slice, SliceFn};
 pub use take::{take, TakeFn};
+pub use to_arrow::*;
 
 mod binary_numeric;
 mod boolean;
@@ -39,6 +40,7 @@ mod scalar_at;
 mod search_sorted;
 mod slice;
 mod take;
+mod to_arrow;
 
 #[cfg(feature = "test-harness")]
 pub mod test_harness {

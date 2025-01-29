@@ -9,6 +9,7 @@ use crate::array::null::NullArray;
 use crate::array::primitive::PrimitiveArray;
 use crate::array::struct_::StructArray;
 use crate::array::{BinaryView, BoolArray, ListArray, VarBinViewArray};
+use crate::arrow::IntoArrowArray;
 use crate::compute::{scalar_at, slice, try_cast};
 use crate::validity::Validity;
 use crate::{

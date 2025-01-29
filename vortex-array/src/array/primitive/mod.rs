@@ -9,6 +9,7 @@ use vortex_dtype::{match_each_native_ptype, DType, NativePType, Nullability, PTy
 use vortex_error::{vortex_bail, vortex_panic, VortexExpect as _, VortexResult};
 use vortex_mask::Mask;
 
+use crate::arrow::IntoArrowArray;
 use crate::encoding::ids;
 use crate::iter::Accessor;
 use crate::stats::StatsSet;

@@ -14,7 +14,7 @@ use vortex_dtype::DType;
 use vortex_error::{vortex_bail, vortex_panic, VortexExpect, VortexResult, VortexUnwrap};
 use vortex_mask::Mask;
 
-use crate::arrow::FromArrowArray;
+use crate::arrow::{FromArrowArray, IntoArrowArray};
 use crate::encoding::ids;
 use crate::stats::StatsSet;
 use crate::validity::{ArrayValidity, Validity, ValidityMetadata};
