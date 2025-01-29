@@ -5,10 +5,10 @@ use serde::{Deserialize, Serialize};
 use vortex_array::compute::{scalar_at, take};
 use vortex_array::encoding::ids;
 use vortex_array::stats::StatsSet;
-use vortex_array::validate::ValidateVTable;
-use vortex_array::validity::{ArrayValidity, ValidityVTable};
+use vortex_array::validity::ArrayValidity;
 use vortex_array::variants::PrimitiveArrayTrait;
-use vortex_array::visitor::{ArrayVisitor, VisitorVTable};
+use vortex_array::visitor::ArrayVisitor;
+use vortex_array::vtable::{ValidateVTable, ValidityVTable, VisitorVTable};
 use vortex_array::{
     impl_encoding, ArrayDType, ArrayData, ArrayLen, Canonical, IntoArrayVariant, IntoCanonical,
     SerdeMetadata,

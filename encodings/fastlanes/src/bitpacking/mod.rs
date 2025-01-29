@@ -5,11 +5,13 @@ use fastlanes::BitPacking;
 use vortex_array::array::PrimitiveArray;
 use vortex_array::encoding::ids;
 use vortex_array::patches::{Patches, PatchesMetadata};
-use vortex_array::stats::{StatisticsVTable, StatsSet};
-use vortex_array::validate::ValidateVTable;
-use vortex_array::validity::{Validity, ValidityMetadata, ValidityVTable};
-use vortex_array::variants::{PrimitiveArrayTrait, VariantsVTable};
-use vortex_array::visitor::{ArrayVisitor, VisitorVTable};
+use vortex_array::stats::StatsSet;
+use vortex_array::validity::{Validity, ValidityMetadata};
+use vortex_array::variants::PrimitiveArrayTrait;
+use vortex_array::visitor::ArrayVisitor;
+use vortex_array::vtable::{
+    StatisticsVTable, ValidateVTable, ValidityVTable, VariantsVTable, VisitorVTable,
+};
 use vortex_array::{
     impl_encoding, ArrayDType, ArrayData, ArrayLen, Canonical, IntoCanonical, RkyvMetadata,
 };
