@@ -1,7 +1,6 @@
 use fsst::{Decompressor, Symbol};
 use serde::{Deserialize, Serialize};
 use vortex_array::array::{VarBinArray, VarBinEncoding};
-use vortex_array::encoding::{ids, Encoding};
 use vortex_array::stats::StatsSet;
 use vortex_array::validity::Validity;
 use vortex_array::variants::{BinaryArrayTrait, Utf8ArrayTrait};
@@ -9,12 +8,19 @@ use vortex_array::visitor::ArrayVisitor;
 use vortex_array::vtable::{
     StatisticsVTable, ValidateVTable, ValidityVTable, VariantsVTable, VisitorVTable,
 };
-use vortex_array::{impl_encoding, ArrayData, IntoArrayVariant, SerdeMetadata};
+use vortex_array::{
+    encoding_ids, impl_encoding, ArrayData, Encoding, IntoArrayVariant, SerdeMetadata,
+};
 use vortex_dtype::{DType, Nullability, PType};
 use vortex_error::{vortex_bail, VortexExpect, VortexResult};
 use vortex_mask::Mask;
 
-impl_encoding!("vortex.fsst", ids::FSST, FSST, SerdeMetadata<FSSTMetadata>);
+impl_encoding!(
+    "vortex.fsst",
+    encoding_ids::FSST,
+    FSST,
+    SerdeMetadata<FSSTMetadata>
+);
 
 static SYMBOLS_DTYPE: DType = DType::Primitive(PType::U64, Nullability::NonNullable);
 static SYMBOL_LENS_DTYPE: DType = DType::Primitive(PType::U8, Nullability::NonNullable);
@@ -68,10 +74,10 @@ impl FSSTArray {
             vortex_bail!(InvalidArgument: "uncompressed_lengths must have integer type and cannot be nullable, found {}", uncompressed_lengths.dtype());
         }
 
-        if codes.encoding().id() != VarBinEncoding::ID {
+        if codes.encoding() != VarBinEncoding::ID {
             vortex_bail!(
                 InvalidArgument: "codes must have varbin encoding, was {}",
-                codes.encoding().id()
+                codes.encoding()
             );
         }
 
