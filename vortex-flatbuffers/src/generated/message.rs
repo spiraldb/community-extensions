@@ -272,7 +272,7 @@ pub struct MessageHeaderUnionTableOffset {}
 pub enum ArrayMessageOffset {}
 #[derive(Copy, Clone, PartialEq)]
 
-/// An ArrayData describes the hierarchy of an array as well as the locations of the data buffers that appear
+/// An Array describes the hierarchy of an array as well as the locations of the data buffers that appear
 /// immediately after the message in the byte stream.
 pub struct ArrayMessage<'a> {
   pub _tab: flatbuffers::Table<'a>,
