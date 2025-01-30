@@ -1,17 +1,15 @@
 use arrow_array::{Array, ArrayRef};
-use arrow_cast::cast;
 use arrow_schema::DataType;
-use vortex_dtype::DType;
-use vortex_error::{vortex_bail, vortex_err, VortexError, VortexExpect, VortexResult};
+use vortex_error::{vortex_err, VortexError, VortexExpect, VortexResult};
 
 use crate::arrow::infer_data_type;
 use crate::encoding::Encoding;
-use crate::{ArrayData, Canonical, IntoArrayData, IntoCanonical};
+use crate::{ArrayData, IntoArrayData, IntoCanonical};
 
 /// Trait for Arrow conversion compute function.
 pub trait ToArrowFn<Array> {
     /// Return the preferred Arrow [`DataType`] of the encoding, or None of the canonical
-    /// [`DataType`] for the array's Vortex [`DType`] should be used.
+    /// [`DataType`] for the array's Vortex [`vortex_dtype::DType`] should be used.
     fn preferred_arrow_data_type(&self, _array: &Array) -> VortexResult<Option<DataType>> {
         Ok(None)
     }

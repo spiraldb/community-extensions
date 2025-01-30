@@ -1,10 +1,8 @@
-use std::sync::Arc;
-
 use itertools::Itertools;
 use num_traits::{AsPrimitive, PrimInt, Zero};
 use vortex_dtype::{match_each_integer_ptype, DType, NativePType};
 use vortex_error::{vortex_err, vortex_panic, VortexExpect, VortexResult};
-use vortex_mask::{AllOr, Mask, MaskIter, MaskValues};
+use vortex_mask::{AllOr, Mask, MaskIter};
 
 use crate::array::varbin::builder::VarBinBuilder;
 use crate::array::varbin::VarBinArray;
@@ -185,7 +183,6 @@ mod test {
     use vortex_buffer::ByteBuffer;
     use vortex_dtype::DType;
     use vortex_dtype::Nullability::{NonNullable, Nullable};
-    use vortex_mask::Mask;
     use vortex_scalar::Scalar;
 
     use crate::array::primitive::PrimitiveArray;

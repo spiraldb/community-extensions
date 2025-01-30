@@ -1,7 +1,6 @@
 #![feature(once_cell_try)]
 #![feature(trusted_len)]
 #![feature(substr_range)]
-#![allow(unused_imports)]
 //! Vortex crate containing core logic for encoding and memory representation of [arrays](ArrayData).
 //!
 //! At the heart of Vortex are [arrays](ArrayData) and [encodings](vtable::EncodingVTable).
@@ -13,8 +12,6 @@
 //! arrays can be [canonicalized](Canonical) into for ease of access in compute functions.
 //!
 
-use std::ops::Deref;
-
 pub use canonical::*;
 pub use children::*;
 pub use context::*;
@@ -22,7 +19,6 @@ pub use data::*;
 pub use encoding::*;
 pub use metadata::*;
 pub use paste;
-use vortex_dtype::DType;
 
 pub mod accessor;
 pub mod aliases;

@@ -1,27 +1,24 @@
 use std::fmt::{Debug, Display};
 
 use num_traits::{AsPrimitive, PrimInt};
-use rkyv::from_bytes;
 use serde::{Deserialize, Serialize};
 pub use stats::compute_varbin_statistics;
 use vortex_buffer::ByteBuffer;
 use vortex_dtype::{match_each_native_ptype, DType, NativePType, Nullability, PType};
 use vortex_error::{
-    vortex_bail, vortex_err, vortex_panic, VortexError, VortexExpect as _, VortexResult,
-    VortexUnwrap as _,
+    vortex_bail, vortex_err, vortex_panic, VortexExpect as _, VortexResult, VortexUnwrap as _,
 };
 use vortex_scalar::Scalar;
 
 use crate::array::primitive::PrimitiveArray;
 use crate::array::varbin::builder::VarBinBuilder;
-use crate::array::{StructMetadata, VarBinViewArray, VarBinViewMetadata};
 use crate::compute::scalar_at;
 use crate::encoding::encoding_ids;
 use crate::stats::StatsSet;
 use crate::validity::{Validity, ValidityMetadata};
 use crate::variants::PrimitiveArrayTrait;
 use crate::vtable::ValidateVTable;
-use crate::{impl_encoding, ArrayData, DeserializeMetadata, RkyvMetadata};
+use crate::{impl_encoding, ArrayData, RkyvMetadata};
 
 mod accessor;
 mod array;
