@@ -12,6 +12,22 @@ use vortex::dtype::{DType, PType};
 use vortex::error::VortexExpect;
 use vortex::scalar::{ListScalar, Scalar, StructScalar};
 
+use crate::install_module;
+
+pub(crate) fn init(py: Python, parent: &Bound<PyModule>) -> PyResult<()> {
+    let m = PyModule::new_bound(py, "scalar")?;
+    parent.add_submodule(&m)?;
+    install_module("vortex._lib.scalar", &m)?;
+
+    // TODO(ngates): rename these based on DType, e.g. Utf8Scalar, BinaryScalar
+    m.add_class::<PyBuffer>()?;
+    m.add_class::<PyBufferString>()?;
+    m.add_class::<PyVortexList>()?;
+    m.add_class::<PyVortexStruct>()?;
+
+    Ok(())
+}
+
 pub fn scalar_into_py(py: Python, x: Scalar, copy_into_python: bool) -> PyResult<PyObject> {
     Ok(match x.dtype() {
         DType::Null => py.None(),
@@ -227,6 +243,7 @@ impl PyVortexStruct {
 impl PyVortexStruct {
     #[pyo3(signature = (*, recursive = false))]
     /// Copy the elements of this list from array memory into a :class:`dict`.
+    // TODO(ngates): rename this as_py() to match Arrow
     pub fn into_python(self_: PyRef<Self>, recursive: bool) -> PyResult<PyObject> {
         to_python_dict(self_.py(), self_.inner.as_struct(), recursive)
     }

@@ -3770,7 +3770,6 @@ name = "pyvortex"
 version = "0.23.0"
 dependencies = [
  "arrow",
- "flume",
  "futures",
  "itertools 0.14.0",
  "log",

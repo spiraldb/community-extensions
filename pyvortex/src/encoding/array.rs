@@ -13,7 +13,6 @@ use crate::dtype::PyDType;
 use crate::python_repr::PythonRepr;
 use crate::scalar::scalar_into_py;
 
-#[pyclass(name = "Array", module = "vortex", sequence, subclass)]
 /// An array of zero or more *rows* each with the same set of *columns*.
 ///
 /// Examples
@@ -21,62 +20,64 @@ use crate::scalar::scalar_into_py;
 ///
 /// Arrays support all the standard comparison operations:
 ///
-/// >>> a = vortex.array(['dog', None, 'cat', 'mouse', 'fish'])
-/// >>> b = vortex.array(['doug', 'jennifer', 'casper', 'mouse', 'faust'])
-/// >>> (a < b).to_arrow_array()
-/// <pyarrow.lib.BooleanArray object at ...>
-/// [
-///   true,
-///   null,
-///   false,
-///   false,
-///   false
-/// ]
-/// >>> (a <= b).to_arrow_array()
-/// <pyarrow.lib.BooleanArray object at ...>
-/// [
-///   true,
-///   null,
-///   false,
-///   true,
-///   false
-/// ]
-/// >>> (a == b).to_arrow_array()
-/// <pyarrow.lib.BooleanArray object at ...>
-/// [
-///   false,
-///   null,
-///   false,
-///   true,
-///   false
-/// ]
-/// >>> (a != b).to_arrow_array()
-/// <pyarrow.lib.BooleanArray object at ...>
-/// [
-///   true,
-///   null,
-///   true,
-///   false,
-///   true
-/// ]
-/// >>> (a >= b).to_arrow_array()
-/// <pyarrow.lib.BooleanArray object at ...>
-/// [
-///   false,
-///   null,
-///   true,
-///   true,
-///   true
-/// ]
-/// >>> (a > b).to_arrow_array()
-/// <pyarrow.lib.BooleanArray object at ...>
-/// [
-///   false,
-///   null,
-///   true,
-///   false,
-///   true
-/// ]
+///     >>> import vortex as vx
+///     >>> a = vx.array(['dog', None, 'cat', 'mouse', 'fish'])
+///     >>> b = vx.array(['doug', 'jennifer', 'casper', 'mouse', 'faust'])
+///     >>> (a < b).to_arrow_array()
+///     <pyarrow.lib.BooleanArray object at ...>
+///     [
+///        true,
+///        null,
+///        false,
+///        false,
+///        false
+///     ]
+///     >>> (a <= b).to_arrow_array()
+///     <pyarrow.lib.BooleanArray object at ...>
+///     [
+///        true,
+///        null,
+///        false,
+///        true,
+///        false
+///     ]
+///     >>> (a == b).to_arrow_array()
+///     <pyarrow.lib.BooleanArray object at ...>
+///     [
+///        false,
+///        null,
+///        false,
+///        true,
+///        false
+///     ]
+///     >>> (a != b).to_arrow_array()
+///     <pyarrow.lib.BooleanArray object at ...>
+///     [
+///        true,
+///        null,
+///        true,
+///        false,
+///        true
+///     ]
+///     >>> (a >= b).to_arrow_array()
+///     <pyarrow.lib.BooleanArray object at ...>
+///     [
+///        false,
+///        null,
+///        true,
+///        true,
+///        true
+///     ]
+///     >>> (a > b).to_arrow_array()
+///     <pyarrow.lib.BooleanArray object at ...>
+///     [
+///        false,
+///        null,
+///        true,
+///        false,
+///        true
+///     ]
+#[pyclass(name = "Array", module = "vortex", sequence, subclass)]
 pub struct PyArray {
     inner: Array,
 }
@@ -93,6 +94,8 @@ impl PyArray {
 
 #[pymethods]
 impl PyArray {
+    /// Convert this array to a PyArrow array.
+    ///
     /// Convert this array to an Arrow array.
     ///
     /// .. seealso::
@@ -107,7 +110,8 @@ impl PyArray {
     ///
     /// Round-trip an Arrow array through a Vortex array:
     ///
-    ///     >>> vortex.array([1, 2, 3]).to_arrow_array()
+    ///     >>> import vortex as vx
+    ///     >>> vx.array([1, 2, 3]).to_arrow_array()
     ///     <pyarrow.lib.Int64Array object at ...>
     ///     [
     ///       1,
@@ -161,80 +165,83 @@ impl PyArray {
         format!("{}", self.inner)
     }
 
+    /// Returns the encoding ID of this array.
     #[getter]
     fn encoding(&self) -> String {
         self.inner.encoding().to_string()
     }
 
+    /// Returns the number of bytes used by this array.
     #[getter]
     fn nbytes(&self) -> usize {
         self.inner.nbytes()
     }
 
-    /// The data type of this array.
+    /// Returns the data type of this array.
     ///
     /// Returns
     /// -------
-    /// :class:`vortex.dtype.DType`
+    /// :class:`vortex.DType`
     ///
     /// Examples
     /// --------
     ///
     /// By default, :func:`~vortex.encoding.array` uses the largest available bit-width:
     ///
-    ///     >>> vortex.array([1, 2, 3]).dtype
-    ///     int(64, False)
+    ///     >>> import vortex as vx
+    ///     >>> vx.array([1, 2, 3]).dtype
+    ///     int(64, nullable=False)
     ///
     /// Including a :obj:`None` forces a nullable type:
     ///
-    ///     >>> vortex.array([1, None, 2, 3]).dtype
-    ///     int(64, True)
+    ///     >>> vx.array([1, None, 2, 3]).dtype
+    ///     int(64, nullable=True)
     ///
     /// A UTF-8 string array:
     ///
-    ///     >>> vortex.array(['hello, ', 'is', 'it', 'me?']).dtype
-    ///     utf8(False)
+    ///     >>> vx.array(['hello, ', 'is', 'it', 'me?']).dtype
+    ///     utf8(nullable=False)
     #[getter]
     fn dtype(self_: PyRef<Self>) -> PyResult<Py<PyDType>> {
         PyDType::wrap(self_.py(), self_.inner.dtype().clone())
     }
 
-    // Rust docs are *not* copied into Python for __lt__: https://github.com/PyO3/pyo3/issues/4326
+    ///Rust docs are *not* copied into Python for __lt__: https://github.com/PyO3/pyo3/issues/4326
     fn __lt__(&self, other: &Bound<PyArray>) -> PyResult<PyArray> {
         let other = other.borrow();
         let inner = compare(&self.inner, &other.inner, Operator::Lt)?;
         Ok(PyArray { inner })
     }
 
-    // Rust docs are *not* copied into Python for __le__: https://github.com/PyO3/pyo3/issues/4326
+    ///Rust docs are *not* copied into Python for __le__: https://github.com/PyO3/pyo3/issues/4326
     fn __le__(&self, other: &Bound<PyArray>) -> PyResult<PyArray> {
         let other = other.borrow();
         let inner = compare(&self.inner, &other.inner, Operator::Lte)?;
         Ok(PyArray { inner })
     }
 
-    // Rust docs are *not* copied into Python for __eq__: https://github.com/PyO3/pyo3/issues/4326
+    ///Rust docs are *not* copied into Python for __eq__: https://github.com/PyO3/pyo3/issues/4326
     fn __eq__(&self, other: &Bound<PyArray>) -> PyResult<PyArray> {
         let other = other.borrow();
         let inner = compare(&self.inner, &other.inner, Operator::Eq)?;
         Ok(PyArray { inner })
     }
 
-    // Rust docs are *not* copied into Python for __ne__: https://github.com/PyO3/pyo3/issues/4326
+    ///Rust docs are *not* copied into Python for __ne__: https://github.com/PyO3/pyo3/issues/4326
     fn __ne__(&self, other: &Bound<PyArray>) -> PyResult<PyArray> {
         let other = other.borrow();
         let inner = compare(&self.inner, &other.inner, Operator::NotEq)?;
         Ok(PyArray { inner })
     }
 
-    // Rust docs are *not* copied into Python for __ge__: https://github.com/PyO3/pyo3/issues/4326
+    ///Rust docs are *not* copied into Python for __ge__: https://github.com/PyO3/pyo3/issues/4326
     fn __ge__(&self, other: &Bound<PyArray>) -> PyResult<PyArray> {
         let other = other.borrow();
         let inner = compare(&self.inner, &other.inner, Operator::Gte)?;
         Ok(PyArray { inner })
     }
 
-    // Rust docs are *not* copied into Python for __gt__: https://github.com/PyO3/pyo3/issues/4326
+    ///Rust docs are *not* copied into Python for __gt__: https://github.com/PyO3/pyo3/issues/4326
     fn __gt__(&self, other: &Bound<PyArray>) -> PyResult<PyArray> {
         let other = other.borrow();
         let inner = compare(&self.inner, &other.inner, Operator::Gt)?;
@@ -245,30 +252,31 @@ impl PyArray {
     ///
     /// Parameters
     /// ----------
-    /// filter : :class:`~vortex.encoding.Array`
+    /// filter : :class:`~vortex.Array`
     ///     Keep all the rows in ``self`` for which the correspondingly indexed row in `filter` is True.
     ///
     /// Returns
     /// -------
-    /// :class:`~vortex.encoding.Array`
+    /// :class:`~vortex.Array`
     ///
     /// Examples
     /// --------
     ///
     /// Keep only the single digit positive integers.
     ///
-    /// >>> a = vortex.array([0, 42, 1_000, -23, 10, 9, 5])
-    /// >>> filter = vortex.array([True, False, False, False, False, True, True])
-    /// >>> a.filter(filter).to_arrow_array()
-    /// <pyarrow.lib.Int64Array object at ...>
-    /// [
-    ///   0,
-    ///   9,
-    ///   5
-    /// ]
-    fn filter(&self, filter: &Bound<PyArray>) -> PyResult<PyArray> {
-        let filter = filter.borrow();
-        let inner = vortex::compute::filter(&self.inner, &Mask::try_from(filter.inner.clone())?)?;
+    ///     >>> import vortex as vx
+    ///     >>> a = vx.array([0, 42, 1_000, -23, 10, 9, 5])
+    ///     >>> filter = vx.array([True, False, False, False, False, True, True])
+    ///     >>> a.filter(filter).to_arrow_array()
+    ///     <pyarrow.lib.Int64Array object at ...>
+    ///     [
+    ///       0,
+    ///       9,
+    ///       5
+    ///     ]
+    fn filter(&self, mask: &Bound<PyArray>) -> PyResult<PyArray> {
+        let mask = mask.borrow();
+        let inner = vortex::compute::filter(&self.inner, &Mask::try_from(mask.inner.clone())?)?;
         Ok(PyArray { inner })
     }
 
@@ -280,36 +288,37 @@ impl PyArray {
     /// Fill forward sensor values over intermediate missing values. Note that leading nulls are
     /// replaced with 0.0:
     ///
-    /// >>> a = vortex.array([
-    /// ...      None,  None, 30.29, 30.30, 30.30,  None,  None, 30.27, 30.25,
-    /// ...     30.22,  None,  None,  None,  None, 30.12, 30.11, 30.11, 30.11,
-    /// ...     30.10, 30.08,  None, 30.21, 30.03, 30.03, 30.05, 30.07, 30.07,
-    /// ... ])
-    /// >>> a.fill_forward().to_arrow_array()
-    /// <pyarrow.lib.DoubleArray object at ...>
-    /// [
-    ///   0,
-    ///   0,
-    ///   30.29,
-    ///   30.3,
-    ///   30.3,
-    ///   30.3,
-    ///   30.3,
-    ///   30.27,
-    ///   30.25,
-    ///   30.22,
-    ///   ...
-    ///   30.11,
-    ///   30.1,
-    ///   30.08,
-    ///   30.08,
-    ///   30.21,
-    ///   30.03,
-    ///   30.03,
-    ///   30.05,
-    ///   30.07,
-    ///   30.07
-    /// ]
+    ///     >>> import vortex as vx
+    ///     >>> a = vx.array([
+    ///     ...      None,  None, 30.29, 30.30, 30.30,  None,  None, 30.27, 30.25,
+    ///     ...     30.22,  None,  None,  None,  None, 30.12, 30.11, 30.11, 30.11,
+    ///     ...     30.10, 30.08,  None, 30.21, 30.03, 30.03, 30.05, 30.07, 30.07,
+    ///     ... ])
+    ///     >>> a.fill_forward().to_arrow_array()
+    ///     <pyarrow.lib.DoubleArray object at ...>
+    ///     [
+    ///       0,
+    ///       0,
+    ///       30.29,
+    ///       30.3,
+    ///       30.3,
+    ///       30.3,
+    ///       30.3,
+    ///       30.27,
+    ///       30.25,
+    ///       30.22,
+    ///       ...
+    ///       30.11,
+    ///       30.1,
+    ///       30.08,
+    ///       30.08,
+    ///       30.21,
+    ///       30.03,
+    ///       30.03,
+    ///       30.05,
+    ///       30.07,
+    ///       30.07
+    ///     ]
     fn fill_forward(&self) -> PyResult<PyArray> {
         let inner = fill_forward(&self.inner)?;
         Ok(PyArray { inner })
@@ -325,7 +334,9 @@ impl PyArray {
     ///
     /// Returns
     /// -------
-    /// one of :class:`int`, :class:`float`, :class:`bool`, :class:`vortex.scalar.Buffer`, :class:`vortex.scalar.BufferString`, :class:`vortex.scalar.VortexList`, :class:`vortex.scalar.VortexStruct`
+    /// one of :class:`int`, :class:`float`, :class:`bool`, :class:`vortex.scalar.Buffer`,
+    ///     :class:`vortex.scalar.BufferString`, :class:`vortex.scalar.VortexList`,
+    ///     :class:`vortex.scalar.VortexStruct`.
     ///     If this array contains numbers or Booleans, this array returns the corresponding
     ///     primitive Python type, i.e. int, float, and bool. For structures and variable-length
     ///     data types, a zero-copy view of the underlying data is returned.
@@ -335,61 +346,62 @@ impl PyArray {
     ///
     /// Retrieve the last element from an array of integers:
     ///
-    /// >>> vortex.array([10, 42, 999, 1992]).scalar_at(3)
-    /// 1992
+    ///     >>> import vortex as vx
+    ///     >>> vx.array([10, 42, 999, 1992]).scalar_at(3)
+    ///     1992
     ///
     /// Retrieve the third element from an array of strings:
     ///
-    /// >>> array = vortex.array(["hello", "goodbye", "it", "is"])
-    /// >>> array.scalar_at(2)
-    /// <vortex.BufferString ...>
+    ///     >>> array = vx.array(["hello", "goodbye", "it", "is"])
+    ///     >>> array.scalar_at(2)
+    ///     <vortex.BufferString ...>
     ///
     /// Vortex, by default, returns a view into the array's data. This avoids copying the data,
     /// which can be expensive if done repeatedly. :meth:`.BufferString.into_python` forcibly copies
     /// the scalar data into a Python data structure.
     ///
-    /// >>> array.scalar_at(2).into_python()
-    /// 'it'
+    ///     >>> array.scalar_at(2).into_python()
+    ///     'it'
     ///
     /// Retrieve an element from an array of structures:
     ///
-    /// >>> array = vortex.array([
-    /// ...     {'name': 'Joseph', 'age': 25},
-    /// ...     {'name': 'Narendra', 'age': 31},
-    /// ...     {'name': 'Angela', 'age': 33},
-    /// ...     None,
-    /// ...     {'name': 'Mikhail', 'age': 57},
-    /// ... ])
-    /// >>> array.scalar_at(2).into_python()
-    /// {'age': 33, 'name': <vortex.BufferString ...>}
+    ///     >>> array = vx.array([
+    ///     ...     {'name': 'Joseph', 'age': 25},
+    ///     ...     {'name': 'Narendra', 'age': 31},
+    ///     ...     {'name': 'Angela', 'age': 33},
+    ///     ...     None,
+    ///     ...     {'name': 'Mikhail', 'age': 57},
+    ///     ... ])
+    ///     >>> array.scalar_at(2).into_python()
+    ///     {'age': 33, 'name': <vortex.BufferString ...>}
     ///
     /// Notice that :meth:`.VortexStruct.into_python` only copies one "layer" of data into
     /// Python. If we want to ensure the entire structure is recurisvely copied into Python we can
     /// specify ``recursive=True``:
     ///
-    /// >>> array.scalar_at(2).into_python(recursive=True)
-    /// {'age': 33, 'name': 'Angela'}
+    ///     >>> array.scalar_at(2).into_python(recursive=True)
+    ///     {'age': 33, 'name': 'Angela'}
     ///
     /// Retrieve a missing element from an array of structures:
     ///
-    /// >>> array.scalar_at(3) is None
-    /// True
+    ///     >>> array.scalar_at(3) is None
+    ///     True
     ///
     /// Out of bounds accesses are prohibited:
     ///
-    /// >>> vortex.array([10, 42, 999, 1992]).scalar_at(10)
-    /// Traceback (most recent call last):
-    /// ...
-    /// ValueError: index 10 out of bounds from 0 to 4
-    /// ...
+    ///     >>> vx.array([10, 42, 999, 1992]).scalar_at(10)
+    ///     Traceback (most recent call last):
+    ///     ...
+    ///     ValueError: index 10 out of bounds from 0 to 4
+    ///     ...
     ///
     /// Unlike Python, negative indices are not supported:
     ///
-    /// >>> vortex.array([10, 42, 999, 1992]).scalar_at(-2)
-    /// Traceback (most recent call last):
-    /// ...
-    /// OverflowError: can't convert negative int to unsigned
-    ///
+    ///     >>> vx.array([10, 42, 999, 1992]).scalar_at(-2)
+    ///     Traceback (most recent call last):
+    ///     ...
+    ///     OverflowError: can't convert negative int to unsigned
+    // TODO(ngates): return a vortex.Scalar
     fn scalar_at(&self, index: &Bound<PyInt>) -> PyResult<PyObject> {
         let scalar = scalar_at(&self.inner, index.extract()?)?;
         scalar_into_py(index.py(), scalar, false)
@@ -411,8 +423,8 @@ impl PyArray {
     ///
     /// Keep only the first and third elements:
     ///
-    ///     >>> a = vortex.array(['a', 'b', 'c', 'd'])
-    ///     >>> indices = vortex.array([0, 2])
+    ///     >>> a = vx.array(['a', 'b', 'c', 'd'])
+    ///     >>> indices = vx.array([0, 2])
     ///     >>> a.take(indices).to_arrow_array()
     ///     <pyarrow.lib.StringArray object at ...>
     ///     [
@@ -422,8 +434,8 @@ impl PyArray {
     ///
     /// Permute and repeat the first and second elements:
     ///
-    ///     >>> a = vortex.array(['a', 'b', 'c', 'd'])
-    ///     >>> indices = vortex.array([0, 1, 1, 0])
+    ///     >>> a = vx.array(['a', 'b', 'c', 'd'])
+    ///     >>> indices = vx.array([0, 1, 1, 0])
     ///     >>> a.take(indices).to_arrow_array()
     ///     <pyarrow.lib.StringArray object at ...>
     ///     [
@@ -446,7 +458,7 @@ impl PyArray {
         Ok(PyArray { inner })
     }
 
-    /// Keep only a contiguous subset of elements.
+    /// Slice this array.
     ///
     /// Parameters
     /// ----------
@@ -465,7 +477,8 @@ impl PyArray {
     ///
     /// Keep only the second through third elements:
     ///
-    ///     >>> a = vortex.array(['a', 'b', 'c', 'd'])
+    ///     >>> import vortex as vx
+    ///     >>> a = vx.array(['a', 'b', 'c', 'd'])
     ///     >>> a.slice(1, 3).to_arrow_array()
     ///     <pyarrow.lib.StringArray object at ...>
     ///     [
@@ -475,14 +488,14 @@ impl PyArray {
     ///
     /// Keep none of the elements:
     ///
-    ///     >>> a = vortex.array(['a', 'b', 'c', 'd'])
+    ///     >>> a = vx.array(['a', 'b', 'c', 'd'])
     ///     >>> a.slice(3, 3).to_arrow_array()
     ///     <pyarrow.lib.StringArray object at ...>
     ///     []
     ///
     /// Unlike Python, it is an error to slice outside the bounds of the array:
     ///
-    ///     >>> a = vortex.array(['a', 'b', 'c', 'd'])
+    ///     >>> a = vx.array(['a', 'b', 'c', 'd'])
     ///     >>> a.slice(2, 10).to_arrow_array()
     ///     Traceback (most recent call last):
     ///     ...
@@ -490,13 +503,12 @@ impl PyArray {
     ///
     /// Or to slice with a negative value:
     ///
-    ///     >>> a = vortex.array(['a', 'b', 'c', 'd'])
+    ///     >>> a = vx.array(['a', 'b', 'c', 'd'])
     ///     >>> a.slice(-2, -1).to_arrow_array()
     ///     Traceback (most recent call last):
     ///     ...
     ///     OverflowError: can't convert negative int to unsigned
-    ///
-    #[pyo3(signature = (start, end, *))]
+    #[pyo3(signature = (start, end))]
     fn slice(&self, start: usize, end: usize) -> PyResult<PyArray> {
         let inner = slice(&self.inner, start, end)?;
         Ok(PyArray::new(inner))
@@ -517,14 +529,15 @@ impl PyArray {
     ///
     /// Uncompressed arrays have straightforward encodings:
     ///
-    ///     >>> arr = vortex.array([1, 2, None, 3])
+    ///     >>> import vortex as vx
+    ///     >>> arr = vx.array([1, 2, None, 3])
     ///     >>> print(arr.tree_display())
     ///     root: vortex.primitive(0x03)(i64?, len=4) nbytes=36 B (100.00%)
     ///       metadata: PrimitiveMetadata { validity: Array }
     ///       buffer (align=8): 32 B
     ///       validity: vortex.bool(0x02)(bool, len=4) nbytes=3 B (8.33%)
-    ///         metadata: BoolMetadata { validity: NonNullable, first_byte_bit_offset: 0 }
-    ///         buffer (align=1): 1 B
+    ///     metadata: BoolMetadata { validity: NonNullable, first_byte_bit_offset: 0 }
+    ///     buffer (align=1): 1 B
     ///     <BLANKLINE>
     ///
     /// Compressed arrays often have more complex, deeply nested encoding trees.
