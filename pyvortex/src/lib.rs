@@ -5,6 +5,8 @@ use std::sync::LazyLock;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
+mod arrays;
+mod compress;
 mod dataset;
 mod dtype;
 mod encoding;
@@ -38,6 +40,8 @@ fn _lib(py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     })?;
 
     // Initialize our submodules, living under vortex._lib
+    arrays::init(py, m)?;
+    compress::init(py, m)?;
     dataset::init(py, m)?;
     dtype::init(py, m)?;
     encoding::init(py, m)?;

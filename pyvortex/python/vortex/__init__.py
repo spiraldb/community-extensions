@@ -1,13 +1,11 @@
 from . import _lib
-from ._lib import expr, scalar
+from ._lib.compress import compress
 from ._lib.dtype import DType, binary, bool_, float_, int_, null, struct, uint, utf8
-from .encoding import Array, array, compress
+from .arrays import Array, array
 
 assert _lib, "Ensure we eagerly import the Vortex native library"
 
 __all__ = [
-    expr,
-    scalar,
     "Array",
     "array",
     "compress",

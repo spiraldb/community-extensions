@@ -20,7 +20,7 @@ use vortex::sampling_compressor::ALL_ENCODINGS_CONTEXT;
 use vortex::stream::ArrayStream;
 use vortex::{Array, IntoArray, IntoArrayVariant};
 
-use crate::encoding::PyArray;
+use crate::arrays::PyArray;
 use crate::expr::PyExpr;
 use crate::object_store_urls::vortex_read_at_from_url;
 use crate::{install_module, TOKIO_RUNTIME};
@@ -120,10 +120,10 @@ impl TokioFileDataset {
             &self.vxf,
             projection_from_python(columns)?,
             filter_from_python(row_filter),
-            indices.map(PyArray::unwrap).cloned(),
+            indices.cloned().map(PyArray::into_inner),
         )
         .await?;
-        Ok(PyArray::new(inner))
+        Ok(PyArray(inner))
     }
 
     async fn async_to_record_batch_reader(
@@ -138,7 +138,7 @@ impl TokioFileDataset {
             scan = scan.with_filter(filter);
         }
 
-        if let Some(indices) = indices.map(PyArray::unwrap).cloned() {
+        if let Some(indices) = indices.cloned().map(PyArray::into_inner) {
             let indices = indices.into_primitive()?.into_buffer();
             scan = scan.with_row_indices(indices);
         }
@@ -209,10 +209,10 @@ impl ObjectStoreUrlDataset {
             &self.vxf,
             projection_from_python(columns)?,
             filter_from_python(row_filter),
-            indices.map(PyArray::unwrap).cloned(),
+            indices.cloned().map(PyArray::into_inner),
         )
         .await?;
-        Ok(PyArray::new(inner))
+        Ok(PyArray(inner))
     }
 
     async fn async_to_record_batch_reader(
@@ -227,7 +227,7 @@ impl ObjectStoreUrlDataset {
             scan = scan.with_filter(filter);
         }
 
-        if let Some(indices) = indices.map(PyArray::unwrap).cloned() {
+        if let Some(indices) = indices.cloned().map(PyArray::into_inner) {
             let indices = indices.into_primitive()?.into_buffer();
             scan = scan.with_row_indices(indices);
         }

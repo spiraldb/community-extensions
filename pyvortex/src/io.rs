@@ -8,8 +8,8 @@ use vortex::file::VortexWriteOptions;
 use vortex::sampling_compressor::SamplingCompressor;
 use vortex::Array;
 
+use crate::arrays::PyArray;
 use crate::dataset::{ObjectStoreUrlDataset, TokioFileDataset};
-use crate::encoding::PyArray;
 use crate::expr::PyExpr;
 use crate::{install_module, TOKIO_RUNTIME};
 
@@ -90,7 +90,6 @@ pub(crate) fn init(py: Python, parent: &Bound<PyModule>) -> PyResult<()> {
 ///         ]
 ///     ]
 ///
-///
 /// Keep rows with an age above 35. This will read O(N_KEPT) rows, when the file format allows.
 ///
 ///     >>> e = vx.io.read_path("a.vortex", row_filter = vx.expr.column("age") > 35)
@@ -118,7 +117,7 @@ pub(crate) fn init(py: Python, parent: &Bound<PyModule>) -> PyResult<()> {
 ///     ...     {'name': 'Mikhail', 'age': 57},
 ///     ...     {'name': None, 'age': None},
 ///     ... ])
-///     >>> vx.io.write_path(a, "a.vortex")
+///     >>> vx.io.write_path(a, "a.vortex") # doctest: +SKIP
 ///     >>> # b = vx.io.read_path("a.vortex")
 ///     >>> # b.to_arrow_array()
 #[pyfunction]
@@ -191,7 +190,7 @@ pub fn read_url(
 ///
 /// Parameters
 /// ----------
-/// array : :class:`~vortex.encoding.Array`
+/// array : :class:`~vortex.Array`
 ///     The array. Must be an array of structures.
 ///
 /// f : :class:`str`
@@ -213,7 +212,7 @@ pub fn read_url(
 ///     ...     {'x': 11},
 ///     ...     {'x': None},
 ///     ... ])
-///     >>> vx.io.write_path(a, "a.vortex") # doctest: +SKIP
+///     >>> vx.io.write_path(a, "a.vortex")
 ///
 #[pyfunction]
 #[pyo3(signature = (array, path, *, compress=true))]
@@ -232,7 +231,7 @@ pub fn write_path(
     }
 
     let fname = path.to_str()?; // TODO(dk): support file objects
-    let mut array = array.borrow().unwrap().clone();
+    let mut array = array.extract::<PyArray>()?.into_inner();
 
     if compress {
         let compressor = SamplingCompressor::default();

@@ -1,13 +1,24 @@
 use pyo3::prelude::*;
 use vortex::sampling_compressor::SamplingCompressor;
 
-use crate::encoding::PyArray;
+use crate::arrays::PyArray;
+use crate::install_module;
+
+pub(crate) fn init(py: Python, parent: &Bound<PyModule>) -> PyResult<()> {
+    let m = PyModule::new_bound(py, "compress")?;
+    parent.add_submodule(&m)?;
+    install_module("vortex._lib.compress", &m)?;
+
+    m.add_function(wrap_pyfunction!(compress, &m)?)?;
+
+    Ok(())
+}
 
 /// Attempt to compress a vortex array.
 ///
 /// Parameters
 /// ----------
-/// array : :class:`~vortex.encoding.Array`
+/// array : :class:`~vortex.Array`
 ///     The array.
 ///
 /// Examples
@@ -37,8 +48,6 @@ use crate::encoding::PyArray;
 #[pyfunction]
 pub fn compress(array: &Bound<PyArray>) -> PyResult<PyArray> {
     let compressor = SamplingCompressor::default();
-    let inner = compressor
-        .compress(array.borrow().unwrap(), None)?
-        .into_array();
-    Ok(PyArray::new(inner))
+    let inner = compressor.compress(&array.borrow(), None)?.into_array();
+    Ok(PyArray(inner))
 }

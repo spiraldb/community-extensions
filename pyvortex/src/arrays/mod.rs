@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use arrow::array::{Array as ArrowArray, ArrayRef};
 use arrow::pyarrow::ToPyArrow;
 use pyo3::exceptions::PyValueError;
@@ -10,8 +12,19 @@ use vortex::mask::Mask;
 use vortex::Array;
 
 use crate::dtype::PyDType;
+use crate::install_module;
 use crate::python_repr::PythonRepr;
 use crate::scalar::scalar_into_py;
+
+pub(crate) fn init(py: Python, parent: &Bound<PyModule>) -> PyResult<()> {
+    let m = PyModule::new_bound(py, "arrays")?;
+    parent.add_submodule(&m)?;
+    install_module("vortex._lib.arrays", &m)?;
+
+    m.add_class::<PyArray>()?;
+
+    Ok(())
+}
 
 /// An array of zero or more *rows* each with the same set of *columns*.
 ///
@@ -78,17 +91,24 @@ use crate::scalar::scalar_into_py;
 ///        true
 ///     ]
 #[pyclass(name = "Array", module = "vortex", sequence, subclass)]
-pub struct PyArray {
-    inner: Array,
-}
+#[derive(Clone)]
+pub struct PyArray(pub Array);
 
 impl PyArray {
-    pub fn new(inner: Array) -> PyArray {
-        PyArray { inner }
+    pub fn inner(&self) -> &Array {
+        &self.0
     }
 
-    pub fn unwrap(&self) -> &Array {
-        &self.inner
+    pub fn into_inner(self) -> Array {
+        self.0
+    }
+}
+
+impl Deref for PyArray {
+    type Target = Array;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
@@ -121,7 +141,7 @@ impl PyArray {
     fn to_arrow_array(self_: PyRef<'_, Self>) -> PyResult<Bound<PyAny>> {
         // NOTE(ngates): for struct arrays, we could also return a RecordBatchStreamReader.
         let py = self_.py();
-        let vortex = &self_.inner;
+        let vortex = &self_.0;
 
         if let Ok(chunked_array) = ChunkedArray::try_from(vortex.clone()) {
             // We figure out a single Arrow Data Type to convert all chunks into, otherwise
@@ -158,23 +178,23 @@ impl PyArray {
     }
 
     fn __len__(&self) -> usize {
-        self.inner.len()
+        self.0.len()
     }
 
     fn __str__(&self) -> String {
-        format!("{}", self.inner)
+        format!("{}", self.0)
     }
 
     /// Returns the encoding ID of this array.
     #[getter]
     fn encoding(&self) -> String {
-        self.inner.encoding().to_string()
+        self.0.encoding().to_string()
     }
 
     /// Returns the number of bytes used by this array.
     #[getter]
     fn nbytes(&self) -> usize {
-        self.inner.nbytes()
+        self.0.nbytes()
     }
 
     /// Returns the data type of this array.
@@ -186,7 +206,7 @@ impl PyArray {
     /// Examples
     /// --------
     ///
-    /// By default, :func:`~vortex.encoding.array` uses the largest available bit-width:
+    /// By default, :func:`vortex.array` uses the largest available bit-width:
     ///
     ///     >>> import vortex as vx
     ///     >>> vx.array([1, 2, 3]).dtype
@@ -203,49 +223,49 @@ impl PyArray {
     ///     utf8(nullable=False)
     #[getter]
     fn dtype(self_: PyRef<Self>) -> PyResult<Py<PyDType>> {
-        PyDType::wrap(self_.py(), self_.inner.dtype().clone())
+        PyDType::wrap(self_.py(), self_.0.dtype().clone())
     }
 
     ///Rust docs are *not* copied into Python for __lt__: https://github.com/PyO3/pyo3/issues/4326
     fn __lt__(&self, other: &Bound<PyArray>) -> PyResult<PyArray> {
         let other = other.borrow();
-        let inner = compare(&self.inner, &other.inner, Operator::Lt)?;
-        Ok(PyArray { inner })
+        let inner = compare(&self.0, &other.0, Operator::Lt)?;
+        Ok(PyArray(inner))
     }
 
     ///Rust docs are *not* copied into Python for __le__: https://github.com/PyO3/pyo3/issues/4326
     fn __le__(&self, other: &Bound<PyArray>) -> PyResult<PyArray> {
         let other = other.borrow();
-        let inner = compare(&self.inner, &other.inner, Operator::Lte)?;
-        Ok(PyArray { inner })
+        let inner = compare(&self.0, &other.0, Operator::Lte)?;
+        Ok(PyArray(inner))
     }
 
     ///Rust docs are *not* copied into Python for __eq__: https://github.com/PyO3/pyo3/issues/4326
     fn __eq__(&self, other: &Bound<PyArray>) -> PyResult<PyArray> {
         let other = other.borrow();
-        let inner = compare(&self.inner, &other.inner, Operator::Eq)?;
-        Ok(PyArray { inner })
+        let inner = compare(&self.0, &other.0, Operator::Eq)?;
+        Ok(PyArray(inner))
     }
 
     ///Rust docs are *not* copied into Python for __ne__: https://github.com/PyO3/pyo3/issues/4326
     fn __ne__(&self, other: &Bound<PyArray>) -> PyResult<PyArray> {
         let other = other.borrow();
-        let inner = compare(&self.inner, &other.inner, Operator::NotEq)?;
-        Ok(PyArray { inner })
+        let inner = compare(&self.0, &other.0, Operator::NotEq)?;
+        Ok(PyArray(inner))
     }
 
     ///Rust docs are *not* copied into Python for __ge__: https://github.com/PyO3/pyo3/issues/4326
     fn __ge__(&self, other: &Bound<PyArray>) -> PyResult<PyArray> {
         let other = other.borrow();
-        let inner = compare(&self.inner, &other.inner, Operator::Gte)?;
-        Ok(PyArray { inner })
+        let inner = compare(&self.0, &other.0, Operator::Gte)?;
+        Ok(PyArray(inner))
     }
 
     ///Rust docs are *not* copied into Python for __gt__: https://github.com/PyO3/pyo3/issues/4326
     fn __gt__(&self, other: &Bound<PyArray>) -> PyResult<PyArray> {
         let other = other.borrow();
-        let inner = compare(&self.inner, &other.inner, Operator::Gt)?;
-        Ok(PyArray { inner })
+        let inner = compare(&self.0, &other.0, Operator::Gt)?;
+        Ok(PyArray(inner))
     }
 
     /// Filter an Array by another Boolean array.
@@ -276,8 +296,8 @@ impl PyArray {
     ///     ]
     fn filter(&self, mask: &Bound<PyArray>) -> PyResult<PyArray> {
         let mask = mask.borrow();
-        let inner = vortex::compute::filter(&self.inner, &Mask::try_from(mask.inner.clone())?)?;
-        Ok(PyArray { inner })
+        let inner = vortex::compute::filter(&self.0, &Mask::try_from(mask.0.clone())?)?;
+        Ok(PyArray(inner))
     }
 
     /// Fill forward non-null values over runs of nulls.
@@ -320,8 +340,8 @@ impl PyArray {
     ///       30.07
     ///     ]
     fn fill_forward(&self) -> PyResult<PyArray> {
-        let inner = fill_forward(&self.inner)?;
-        Ok(PyArray { inner })
+        let inner = fill_forward(&self.0)?;
+        Ok(PyArray(inner))
     }
 
     /// Retrieve a row by its index.
@@ -403,7 +423,7 @@ impl PyArray {
     ///     OverflowError: can't convert negative int to unsigned
     // TODO(ngates): return a vortex.Scalar
     fn scalar_at(&self, index: &Bound<PyInt>) -> PyResult<PyObject> {
-        let scalar = scalar_at(&self.inner, index.extract()?)?;
+        let scalar = scalar_at(&self.0, index.extract()?)?;
         scalar_into_py(index.py(), scalar, false)
     }
 
@@ -411,12 +431,12 @@ impl PyArray {
     ///
     /// Parameters
     /// ----------
-    /// indices : :class:`~vortex.encoding.Array`
+    /// indices : :class:`~vortex.Array`
     ///     An array of indices to keep.
     ///
     /// Returns
     /// -------
-    /// :class:`~vortex.encoding.Array`
+    /// :class:`~vortex.Array`
     ///
     /// Examples
     /// --------
@@ -445,7 +465,7 @@ impl PyArray {
     ///       "a"
     ///     ]
     fn take(&self, indices: &Bound<PyArray>) -> PyResult<PyArray> {
-        let indices = &indices.borrow().inner;
+        let indices = &indices.borrow().0;
 
         if !indices.dtype().is_int() {
             return Err(PyValueError::new_err(format!(
@@ -454,8 +474,8 @@ impl PyArray {
             )));
         }
 
-        let inner = take(&self.inner, indices)?;
-        Ok(PyArray { inner })
+        let inner = take(&self.0, indices)?;
+        Ok(PyArray(inner))
     }
 
     /// Slice this array.
@@ -470,7 +490,7 @@ impl PyArray {
     ///
     /// Returns
     /// -------
-    /// :class:`~vortex.encoding.Array`
+    /// :class:`~vortex.Array`
     ///
     /// Examples
     /// --------
@@ -510,8 +530,8 @@ impl PyArray {
     ///     OverflowError: can't convert negative int to unsigned
     #[pyo3(signature = (start, end))]
     fn slice(&self, start: usize, end: usize) -> PyResult<PyArray> {
-        let inner = slice(&self.inner, start, end)?;
-        Ok(PyArray::new(inner))
+        let inner = slice(&self.0, start, end)?;
+        Ok(PyArray(inner))
     }
 
     /// Internal technical details about the encoding of this Array.
@@ -542,6 +562,6 @@ impl PyArray {
     ///
     /// Compressed arrays often have more complex, deeply nested encoding trees.
     fn tree_display(&self) -> String {
-        self.inner.tree_display().to_string()
+        self.0.tree_display().to_string()
     }
 }
