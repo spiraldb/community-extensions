@@ -1,4 +1,16 @@
 from . import _lib
+from ._lib.arrays import (
+    BoolArray,
+    ChunkedArray,
+    ConstantArray,
+    ExtensionArray,
+    ListArray,
+    NullArray,
+    PrimitiveArray,
+    StructArray,
+    VarBinArray,
+    VarBinViewArray,
+)
 from ._lib.compress import compress
 from ._lib.dtype import (
     BinaryDType,
@@ -37,9 +49,20 @@ from .arrays import Array, array
 assert _lib, "Ensure we eagerly import the Vortex native library"
 
 __all__ = [
-    "Array",
     "array",
     "compress",
+    # Arrays and builtin encodings
+    "Array",
+    "ConstantArray",
+    "ChunkedArray",
+    "NullArray",
+    "BoolArray",
+    "PrimitiveArray",
+    "VarBinArray",
+    "VarBinViewArray",
+    "StructArray",
+    "ListArray",
+    "ExtensionArray",
     # DTypes
     "DType",
     "NullDType",
