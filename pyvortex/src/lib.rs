@@ -14,7 +14,7 @@ mod expr;
 mod io;
 mod object_store_urls;
 mod python_repr;
-mod scalar;
+pub(crate) mod scalar;
 
 use log::LevelFilter;
 use pyo3_log::{Caching, Logger};
@@ -84,3 +84,6 @@ pub fn install_module(name: &str, module: &Bound<PyModule>) -> PyResult<()> {
     module.setattr("__name__", name)?;
     Ok(())
 }
+
+/// An adapter struct used to localize trait impls to this crate.
+pub struct PyVortex<T>(pub T);
