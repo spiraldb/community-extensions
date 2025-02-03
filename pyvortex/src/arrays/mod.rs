@@ -122,7 +122,7 @@ pub(crate) fn init(py: Python, parent: &Bound<PyModule>) -> PyResult<()> {
 ///        false,
 ///        true
 ///     ]
-#[pyclass(name = "Array", module = "vortex", sequence, subclass)]
+#[pyclass(name = "Array", module = "vortex", sequence, subclass, frozen)]
 #[derive(Clone)]
 pub struct PyArray(Array);
 
@@ -160,6 +160,24 @@ impl PyArray {
             DType::List(..) => Self::with_subclass(py, array, PyListTypeArray),
             DType::Extension(_) => Self::with_subclass(py, array, PyExtensionTypeArray),
         }
+    }
+
+    /// Initialize a [`PyArray`] with an [`EncodingSubclass`].
+    pub fn init_encoding<S: EncodingSubclass>(
+        array: Bound<PyArray>,
+        subclass: S,
+    ) -> PyResult<Bound<S>> {
+        if array.get().deref().encoding() != <<S as EncodingSubclass>::Encoding as Encoding>::ID {
+            return Err(PyValueError::new_err(format!(
+                "Array has encoding {}, expected {}",
+                array.get().deref().encoding(),
+                <<S as EncodingSubclass>::Encoding as Encoding>::ID
+            )));
+        }
+        Bound::new(
+            array.py(),
+            PyClassInitializer::from(array.get().clone()).add_subclass(subclass),
+        )
     }
 
     fn with_subclass<S: PyClass<BaseType = PyArray>>(
@@ -631,7 +649,7 @@ impl PyArray {
 }
 
 /// A marker trait indicating a PyO3 class is a subclass of Vortex `Array`.
-pub trait ArraySubclass: PyClass<BaseType = PyArray> {
+pub trait EncodingSubclass: PyClass<BaseType = PyArray> {
     type Encoding: Encoding;
 }
 
@@ -640,7 +658,7 @@ pub trait AsArrayRef<T> {
     fn as_array_ref(&self) -> &T;
 }
 
-impl<A: ArraySubclass> AsArrayRef<<A::Encoding as Encoding>::Array> for PyRef<'_, A>
+impl<A: EncodingSubclass> AsArrayRef<<A::Encoding as Encoding>::Array> for PyRef<'_, A>
 where
     for<'a> &'a <A::Encoding as Encoding>::Array: TryFrom<&'a Array, Error = VortexError>,
 {
