@@ -1,8 +1,9 @@
 use core::fmt;
 use std::fmt::{Display, Formatter};
 
+use arrow_buffer::BooleanBuffer;
 use arrow_ord::cmp;
-use vortex_dtype::{DType, Nullability};
+use vortex_dtype::{DType, NativePType, Nullability};
 use vortex_error::{vortex_bail, VortexError, VortexResult};
 use vortex_scalar::Scalar;
 
@@ -166,6 +167,24 @@ pub fn compare(
     Ok(result)
 }
 
+/// Helper function to compare empty values with arrays that have external value length information
+/// like `VarBin`.
+pub fn compare_lengths_to_empty<P, I>(lengths: I, op: Operator) -> BooleanBuffer
+where
+    P: NativePType,
+    I: Iterator<Item = P>,
+{
+    // All comparison can be expressed in terms of equality. "" is the absolute min of possible value.
+    let cmp_fn = match op {
+        Operator::Eq | Operator::Lte => |v| v == P::zero(),
+        Operator::NotEq | Operator::Gt => |v| v != P::zero(),
+        Operator::Gte => |_| true,
+        Operator::Lt => |_| false,
+    };
+
+    lengths.map(cmp_fn).collect::<BooleanBuffer>()
+}
+
 /// Implementation of `CompareFn` using the Arrow crate.
 fn arrow_compare(left: &Array, right: &Array, operator: Operator) -> VortexResult<Array> {
     let nullable = left.dtype().is_nullable() || right.dtype().is_nullable();
@@ -323,5 +342,19 @@ mod tests {
         let res = compare.as_constant().unwrap();
         assert_eq!(res.as_bool().value(), Some(false));
         assert_eq!(compare.len(), 10);
+    }
+
+    #[rstest::rstest]
+    #[case(Operator::Eq, vec![false, false, false, true])]
+    #[case(Operator::NotEq, vec![true, true, true, false])]
+    #[case(Operator::Gt, vec![true, true, true, false])]
+    #[case(Operator::Gte, vec![true, true, true, true])]
+    #[case(Operator::Lt, vec![false, false, false, false])]
+    #[case(Operator::Lte, vec![false, false, false, true])]
+    fn test_cmp_to_empty(#[case] op: Operator, #[case] expected: Vec<bool>) {
+        let lengths: Vec<i32> = vec![1, 5, 7, 0];
+
+        let output = compare_lengths_to_empty(lengths.iter().copied(), op);
+        assert_eq!(Vec::from_iter(output.iter()), expected);
     }
 }
