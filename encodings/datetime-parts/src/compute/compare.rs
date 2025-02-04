@@ -11,21 +11,12 @@ use crate::timestamp;
 impl CompareFn<DateTimePartsArray> for DateTimePartsEncoding {
     /// Compares two arrays and returns a new boolean array with the result of the comparison.
     /// Or, returns None if comparison is not supported.
-    ///
-    /// # NOTE: `Operator::Lt` and `Operator::Gt` are currently not supported.
     fn compare(
         &self,
         lhs: &DateTimePartsArray,
         rhs: &Array,
         operator: Operator,
     ) -> VortexResult<Option<Array>> {
-        if !matches!(
-            operator,
-            Operator::Eq | Operator::NotEq | Operator::Lte | Operator::Gte
-        ) {
-            return Ok(None);
-        }
-
         let Some(rhs_const) = rhs.as_constant() else {
             return Ok(None);
         };
@@ -48,9 +39,16 @@ impl CompareFn<DateTimePartsArray> for DateTimePartsEncoding {
         match operator {
             Operator::Eq => compare_eq(lhs, &ts_parts),
             Operator::NotEq => compare_ne(lhs, &ts_parts),
-            Operator::Lte => compare_lte(lhs, &ts_parts),
-            Operator::Gte => compare_gte(lhs, &ts_parts),
-            _ => unreachable!("operator {} not supported", operator),
+            // lt and lte have identical behavior, as we optimize
+            // for the case that all days on the lhs are smaller.
+            //
+            // If that special case is not hit, we return `Ok(None)` to
+            // signal that the comparison wasn't handled within dtp.
+            Operator::Lt => compare_lt(lhs, &ts_parts),
+            Operator::Lte => compare_lt(lhs, &ts_parts),
+            // (Like for lt, lte)
+            Operator::Gt => compare_gt(lhs, &ts_parts),
+            Operator::Gte => compare_gt(lhs, &ts_parts),
         }
     }
 }
@@ -111,7 +109,7 @@ fn compare_ne(
     Ok(Some(comparison))
 }
 
-fn compare_lte(
+fn compare_lt(
     lhs: &DateTimePartsArray,
     ts_parts: &timestamp::TimestampParts,
 ) -> VortexResult<Option<Array>> {
@@ -124,7 +122,7 @@ fn compare_lte(
     Ok(None)
 }
 
-fn compare_gte(
+fn compare_gt(
     lhs: &DateTimePartsArray,
     ts_parts: &timestamp::TimestampParts,
 ) -> VortexResult<Option<Array>> {
@@ -209,24 +207,24 @@ mod test {
     }
 
     #[test]
-    fn compare_date_time_parts_lte() {
+    fn compare_date_time_parts_lt() {
         let lhs = dtp_array_from_timestamp(0i64); // January 1, 1970, 01:00:00 UTC
         let rhs = dtp_array_from_timestamp(86400i64); // January 2, 1970, 00:00:00 UTC
 
         let comparison = DateTimePartsEncoding
-            .compare(&lhs, &rhs, Operator::Lte)
+            .compare(&lhs, &rhs, Operator::Lt)
             .unwrap()
             .unwrap();
         assert_eq!(comparison.statistics().compute_true_count().unwrap(), 1);
     }
 
     #[test]
-    fn compare_date_time_parts_gte() {
+    fn compare_date_time_parts_gt() {
         let lhs = dtp_array_from_timestamp(86400i64); // January 2, 1970, 02:00:00 UTC
         let rhs = dtp_array_from_timestamp(0i64); // January 1, 1970, 01:00:00 UTC
 
         let comparison = DateTimePartsEncoding
-            .compare(&lhs, &rhs, Operator::Gte)
+            .compare(&lhs, &rhs, Operator::Gt)
             .unwrap()
             .unwrap();
         assert_eq!(comparison.statistics().compute_true_count().unwrap(), 1);
@@ -264,12 +262,18 @@ mod test {
         assert_eq!(comparison.statistics().compute_true_count().unwrap(), 1);
 
         let comparison = DateTimePartsEncoding
+            .compare(&lhs, &rhs, Operator::Lt)
+            .unwrap()
+            .unwrap();
+        assert_eq!(comparison.statistics().compute_true_count().unwrap(), 1);
+
+        let comparison = DateTimePartsEncoding
             .compare(&lhs, &rhs, Operator::Lte)
             .unwrap()
             .unwrap();
         assert_eq!(comparison.statistics().compute_true_count().unwrap(), 1);
 
-        // `compare_gte` only covers the case of all lhs values being larger.
-        // Therefore it is not unit tested here.
+        // `Operator::Gt` and `Operator::Gte` only cover the case of all lhs values
+        // being larger. Therefore, these cases are not covered by unit tests.
     }
 }
