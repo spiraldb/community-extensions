@@ -63,6 +63,7 @@ impl<R: VortexReadAt> IoDriver for FileIoDriver<R> {
         stream: impl Stream<Item = SegmentRequest> + 'static,
     ) -> impl Stream<Item = VortexResult<()>> + 'static {
         // We map the segment requests to their respective locations within the file.
+        let coalescing_window = self.read.performance_hint().coalescing_window();
         let segment_map = self.file_layout.segment_map().clone();
         let stream = stream.filter_map(move |request| {
             let segment_map = segment_map.clone();
@@ -127,7 +128,9 @@ impl<R: VortexReadAt> IoDriver for FileIoDriver<R> {
             .inspect(|requests| log::debug!("Processing {} segment requests", requests.len()));
 
         // Coalesce the segment requests to minimize the number of I/O operations.
-        let stream = stream.map(coalesce).flat_map(stream::iter);
+        let stream = stream
+            .map(move |r| coalesce(r, coalescing_window))
+            .flat_map(stream::iter);
 
         // Submit the coalesced requests to the I/O.
         let read = self.read.clone();
@@ -221,13 +224,15 @@ async fn evaluate<R: VortexReadAt>(
 }
 
 /// TODO(ngates): outsource coalescing to a trait
-fn coalesce(requests: Vec<FileSegmentRequest>) -> Vec<CoalescedSegmentRequest> {
-    const COALESCE: u64 = 1024 * 1024; // 1MB
+fn coalesce(
+    requests: Vec<FileSegmentRequest>,
+    coalescing_window: u64,
+) -> Vec<CoalescedSegmentRequest> {
     let fetch_ranges = merge_ranges(
         requests
             .iter()
             .map(|r| r.location.offset..r.location.offset + r.location.length as u64),
-        COALESCE,
+        coalescing_window,
     );
     let mut coalesced = fetch_ranges
         .iter()
@@ -239,7 +244,7 @@ fn coalesce(requests: Vec<FileSegmentRequest>) -> Vec<CoalescedSegmentRequest> {
 
     for req in requests {
         let idx = fetch_ranges.partition_point(|v| v.start <= req.location.offset) - 1;
-        coalesced.as_mut_slice()[idx].requests.push(req);
+        coalesced[idx].requests.push(req);
     }
 
     // Ensure we sort the requests by segment ID within the coalesced request.
