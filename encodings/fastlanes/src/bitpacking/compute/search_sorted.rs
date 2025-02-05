@@ -8,10 +8,9 @@ use vortex_array::compute::{
     IndexOrd, Len, SearchResult, SearchSorted, SearchSortedFn, SearchSortedSide,
     SearchSortedUsizeFn,
 };
-use vortex_array::validity::Validity;
 use vortex_array::variants::PrimitiveArrayTrait;
 use vortex_dtype::{match_each_unsigned_integer_ptype, DType, NativePType};
-use vortex_error::{vortex_err, VortexError, VortexResult};
+use vortex_error::{VortexError, VortexResult};
 use vortex_scalar::Scalar;
 
 use crate::{unpack_single_primitive, BitPackedArray, BitPackedEncoding};
@@ -158,17 +157,8 @@ impl<'a, T: BitPacking + NativePType> BitPackedSearch<'a, T> {
             .map(|p| p.min_index())
             .transpose()?
             .unwrap_or_else(|| array.len());
-        let first_non_null_idx = match array.validity() {
-            Validity::NonNullable | Validity::AllValid => 0,
-            Validity::AllInvalid => array.len(),
-            Validity::Array(varray) => {
-                // In sorted order, nulls come before all the non-null values, i.e. we have true count worth of non null values at the end
-                array.len()
-                    - varray.statistics().compute_true_count().ok_or_else(|| {
-                        vortex_err!("Couldn't compute true count for validity of bitpacked array")
-                    })?
-            }
-        };
+        // In sorted order, nulls come before all the non-null values, i.e. we skip invalid_count worth of entries from beginning
+        let first_non_null_idx = array.invalid_count()?;
 
         Ok(Self {
             packed_as_slice: array.packed_slice::<T>(),
