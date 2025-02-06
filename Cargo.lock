@@ -5291,6 +5291,7 @@ version = "0.24.0"
 dependencies = [
  "arrow-buffer",
  "criterion",
+ "divan",
  "num-traits",
  "rand",
  "rustc-hash",
