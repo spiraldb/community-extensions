@@ -33,7 +33,7 @@ use super::cache::FileLayoutCache;
 use super::execution::VortexExec;
 use super::sink::VortexSink;
 use crate::can_be_pushed_down;
-use crate::converter::directional_bound_to_df_precision;
+use crate::converter::{bound_to_datafusion, directional_bound_to_df_precision};
 
 /// Vortex implementation of a DataFusion [`FileFormat`].
 #[derive(Debug)]
@@ -113,13 +113,7 @@ impl FileFormatFactory for VortexFormatFactory {
 
 impl Default for VortexFormat {
     fn default() -> Self {
-        let opts = VortexFormatOptions::default();
-
-        Self {
-            context: Default::default(),
-            file_layout_cache: FileLayoutCache::new(opts.cache_size_mb),
-            opts,
-        }
+        Self::new(Default::default())
     }
 }
 
@@ -128,8 +122,8 @@ impl VortexFormat {
     pub fn new(context: ContextRef) -> Self {
         let opts = VortexFormatOptions::default();
         Self {
+            file_layout_cache: FileLayoutCache::new(opts.cache_size_mb, context.clone()),
             context,
-            file_layout_cache: FileLayoutCache::new(opts.cache_size_mb),
             opts,
         }
     }
@@ -169,8 +163,8 @@ impl FileFormat for VortexFormat {
                 let cache = self.file_layout_cache.clone();
                 async move {
                     let file_layout = cache.try_get(&o, store).await?;
-                    let stats_set = infer_schema(file_layout.dtype())?;
-                    VortexResult::Ok(stats_set)
+                    let inferred_schema = infer_schema(file_layout.dtype())?;
+                    VortexResult::Ok(inferred_schema)
                 }
             })
             .buffered(self.opts.concurrent_infer_schema_ops)
@@ -218,19 +212,19 @@ impl FileFormat for VortexFormat {
             )?
             .await?;
 
+        let total_byte_size = stats
+            .iter()
+            .map(|stats_set| {
+                stats_set
+                    .get_as::<usize>(Stat::UncompressedSizeInBytes)
+                    .unwrap_or_else(|| stats::Precision::inexact(0_usize))
+            })
+            .fold(stats::Precision::exact(0_usize), |acc, stats_set| {
+                acc.zip(stats_set).map(|(acc, stats_set)| acc + stats_set)
+            });
+
         // Sum up the total byte size across all the columns.
-        let total_byte_size = directional_bound_to_df_precision(Some(
-            stats
-                .iter()
-                .map(|stats_set| {
-                    stats_set
-                        .get_as::<usize>(Stat::UncompressedSizeInBytes)
-                        .unwrap_or_else(|| stats::Precision::inexact(0_usize))
-                })
-                .fold(stats::Precision::exact(0_usize), |acc, stats_set| {
-                    acc.zip(stats_set).map(|(acc, stats_set)| acc + stats_set)
-                }),
-        ));
+        let total_byte_size = bound_to_datafusion(total_byte_size);
 
         let column_statistics = stats
             .into_iter()
