@@ -7,8 +7,9 @@ use vortex_error::{vortex_bail, vortex_err, VortexResult};
 use crate::layouts::flat::FlatLayout;
 use crate::segments::SegmentWriter;
 use crate::writer::LayoutWriter;
-use crate::{Layout, LayoutVTableRef};
+use crate::{Layout, LayoutStrategy, LayoutVTableRef, LayoutWriterExt};
 
+#[derive(Clone)]
 pub struct FlatLayoutOptions {
     /// Stats to preserve when writing arrays
     pub array_stats: Vec<Stat>,
@@ -19,6 +20,12 @@ impl Default for FlatLayoutOptions {
         Self {
             array_stats: STATS_TO_WRITE.to_vec(),
         }
+    }
+}
+
+impl LayoutStrategy for FlatLayoutOptions {
+    fn new_writer(&self, dtype: &DType) -> VortexResult<Box<dyn LayoutWriter>> {
+        Ok(FlatLayoutWriter::new(dtype.clone(), self.clone()).boxed())
     }
 }
 

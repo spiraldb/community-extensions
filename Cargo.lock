@@ -503,7 +503,6 @@ dependencies = [
  "uuid",
  "vortex",
  "vortex-datafusion",
- "vortex-mask",
  "xshell",
 ]
 
@@ -5495,7 +5494,10 @@ dependencies = [
  "vortex-flatbuffers",
  "vortex-io",
  "vortex-layout",
+ "vortex-mask",
  "vortex-sampling-compressor",
+ "vortex-scalar",
+ "vortex-scan",
 ]
 
 [[package]]
