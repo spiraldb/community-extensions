@@ -1,10 +1,9 @@
 use async_trait::async_trait;
-use futures::future::ready;
-use futures::stream::FuturesOrdered;
-use futures::{FutureExt, TryStreamExt as _};
+use futures::future::{ready, try_join_all};
+use futures::FutureExt;
 use vortex_array::array::{ChunkedArray, ConstantArray};
 use vortex_array::{Array, IntoArray};
-use vortex_error::VortexResult;
+use vortex_error::{VortexExpect, VortexResult};
 use vortex_expr::ExprRef;
 use vortex_scalar::Scalar;
 use vortex_scan::RowMask;
@@ -22,26 +21,19 @@ impl ExprEvaluator for ChunkedReader {
         // First we need to compute the pruning mask
         let pruning_mask = self.pruning_mask(&expr).await?;
 
+        // Figure out which chunks intersect the RowMask
+        let chunk_range = self.chunk_range(row_mask.begin()..row_mask.end());
+
         // Now we set up futures to evaluate each chunk at the same time
-        let mut chunks = FuturesOrdered::new();
+        let mut chunks = Vec::new();
 
-        let mut row_offset = 0;
-        for chunk_idx in 0..self.nchunks() {
-            let chunk_reader = self.child(chunk_idx)?;
-
+        for chunk_idx in chunk_range {
             // Figure out the row range of the chunk
-            let chunk_len = chunk_reader.layout().row_count();
-            let chunk_range = row_offset..row_offset + chunk_len;
-            row_offset += chunk_len;
-
-            // Try to skip the chunk based on the row-mask
-            if row_mask.is_disjoint(chunk_range.clone()) {
-                continue;
-            }
+            let chunk_row_range = self.chunk_offset(chunk_idx)..self.chunk_offset(chunk_idx + 1);
 
             let chunk_mask = row_mask
-                .slice(chunk_range.start, chunk_range.end)?
-                .shift(chunk_range.start)?;
+                .slice(chunk_row_range.start, chunk_row_range.end)?
+                .shift(chunk_row_range.start)?;
 
             // If the chunk is empty skip `evaluate_expr` on child and omit chunk from array
             if chunk_mask.true_count() == 0 {
@@ -56,18 +48,26 @@ impl ExprEvaluator for ChunkedReader {
                         Scalar::bool(false, dtype.nullability()),
                         chunk_mask.true_count(),
                     );
-                    chunks.push_back(ready(Ok(false_array.into_array())).boxed());
+                    chunks.push(ready(Ok(false_array.into_array())).boxed());
                     continue;
                 }
             }
 
             // Otherwise, we need to read it. So we set up a mask for the chunk range.
-
-            chunks.push_back(chunk_reader.evaluate_expr(chunk_mask, expr.clone()));
+            let chunk_reader = self.child(chunk_idx)?;
+            chunks.push(chunk_reader.evaluate_expr(chunk_mask, expr.clone()));
         }
 
-        let chunks = chunks.try_collect::<Vec<_>>().await?;
+        if chunks.len() == 1 {
+            // Avoid creating a chunked array for a single chunk
+            let chunk = chunks
+                .pop()
+                .vortex_expect("Expected at least one chunk to be evaluated")
+                .await?;
+            return Ok(chunk);
+        }
 
+        let chunks = try_join_all(chunks).await?;
         Ok(ChunkedArray::try_new(chunks, dtype)?.into_array())
     }
 }
@@ -87,12 +87,13 @@ mod test {
     use vortex_scan::RowMask;
 
     use crate::layouts::chunked::writer::ChunkedLayoutWriter;
+    use crate::scan::ScanExecutor;
     use crate::segments::test::TestSegments;
     use crate::writer::LayoutWriterExt;
     use crate::Layout;
 
     /// Create a chunked layout with three chunks of primitive arrays.
-    fn chunked_layout() -> (Arc<TestSegments>, Layout) {
+    fn chunked_layout() -> (Arc<ScanExecutor>, Layout) {
         let mut segments = TestSegments::default();
         let layout = ChunkedLayoutWriter::new(
             &DType::Primitive(PType::I32, NonNullable),
@@ -107,7 +108,7 @@ mod test {
             ],
         )
         .unwrap();
-        (Arc::new(segments), layout)
+        (ScanExecutor::inline(Arc::new(segments)), layout)
     }
 
     #[test]

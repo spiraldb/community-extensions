@@ -9,18 +9,14 @@ use vortex_expr::ExprRef;
 use vortex_scan::RowMask;
 
 use crate::layouts::struct_::reader::StructReader;
-use crate::{ExprEvaluator, LayoutReader};
+use crate::scan::ScanTask;
+use crate::ExprEvaluator;
 
 #[async_trait]
 impl ExprEvaluator for StructReader {
     async fn evaluate_expr(&self, row_mask: RowMask, expr: ExprRef) -> VortexResult<Array> {
         // Partition the expression into expressions that can be evaluated over individual fields
         let partitioned = self.partition_expr(expr.clone())?;
-        log::debug!(
-            "Evaluating partitioned expression {}: {:?}",
-            self.layout().name(),
-            partitioned
-        );
 
         let field_readers: Vec<_> = partitioned
             .partition_names
@@ -49,7 +45,9 @@ impl ExprEvaluator for StructReader {
         )?
         .into_array();
 
-        partitioned.root.evaluate(&root_scope)
+        self.executor()
+            .evaluate(&root_scope, &[ScanTask::Expr(partitioned.root.clone())])
+            .await
     }
 }
 
@@ -69,12 +67,13 @@ mod tests {
 
     use crate::layouts::flat::writer::FlatLayoutWriter;
     use crate::layouts::struct_::writer::StructLayoutWriter;
+    use crate::scan::ScanExecutor;
     use crate::segments::test::TestSegments;
     use crate::writer::LayoutWriterExt;
     use crate::Layout;
 
     /// Create a chunked layout with three chunks of primitive arrays.
-    fn struct_layout() -> (Arc<TestSegments>, Layout) {
+    fn struct_layout() -> (Arc<ScanExecutor>, Layout) {
         let mut segments = TestSegments::default();
 
         let layout = StructLayoutWriter::new(
@@ -104,7 +103,7 @@ mod tests {
             .map(IntoArray::into_array)],
         )
         .unwrap();
-        (Arc::new(segments), layout)
+        (ScanExecutor::inline(Arc::new(segments)), layout)
     }
 
     #[test]
