@@ -500,6 +500,10 @@ dependencies = [
  "tar",
  "tikv-jemallocator",
  "tokio",
+ "tracing",
+ "tracing-chrome",
+ "tracing-futures",
+ "tracing-subscriber",
  "uuid",
  "vortex",
  "vortex-datafusion",
@@ -5030,6 +5034,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "tracing-chrome"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf0a738ed5d6450a9fb96e86a23ad808de2b727fd1394585da5cdd6788ffe724"
+dependencies = [
+ "serde_json",
+ "tracing-core",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "tracing-core"
 version = "0.1.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5037,6 +5052,18 @@ checksum = "e672c95779cf947c5311f83787af4fa8fffd12fb27e4993211a84bdfd9610f9c"
 dependencies = [
  "once_cell",
  "valuable",
+]
+
+[[package]]
+name = "tracing-futures"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "97d095ae15e245a057c8e8451bab9b3ee1e1f68e9ba2b4fbc18d0ac5237835f2"
+dependencies = [
+ "futures",
+ "futures-task",
+ "pin-project",
+ "tracing",
 ]
 
 [[package]]
@@ -5334,6 +5361,8 @@ dependencies = [
  "rand",
  "tempfile",
  "tokio",
+ "tracing",
+ "tracing-futures",
  "url",
  "vortex-array",
  "vortex-buffer",
@@ -5487,7 +5516,6 @@ dependencies = [
  "rayon",
  "rustc-hash",
  "tokio",
- "tracing",
  "vortex-array",
  "vortex-buffer",
  "vortex-dtype",

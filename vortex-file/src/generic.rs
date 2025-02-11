@@ -69,6 +69,7 @@ pub struct GenericScanOptions {
     execution_concurrency: usize,
     execution_mode: ExecutionMode,
     /// The number of concurrent I/O requests to spawn.
+    /// This should be smaller than execution concurrency for coalescing to occur.
     io_concurrency: usize,
 }
 
@@ -76,7 +77,7 @@ impl Default for GenericScanOptions {
     fn default() -> Self {
         Self {
             execution_concurrency: 10,
-            execution_mode: ExecutionMode::Inline,
+            execution_mode: ExecutionMode::default(),
             io_concurrency: 10,
         }
     }
