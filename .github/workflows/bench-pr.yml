@@ -26,9 +26,11 @@ jobs:
     name: Run Criterion benchmarks with Codspeed
     needs: label_trigger
     env:
+      # TODO(joe): replace this list with a off-list instead of the current on-list.
       BENCH_TARGETS: >
         dict_compare
         dict_compress
+        chunked_dict_array_builder
         bitpacking_take
         run_end_filter
         run_end_null_count
@@ -50,9 +52,9 @@ jobs:
       - name: Build benchmark targets
         env:
           RUSTFLAGS: "-C target-cpu=native"
-        # The profile needs to be set explicitly to bench
-        # as codspeed by default compiles with the release profile.
-        run: cargo codspeed build --profile bench $BENCH_TARGETS
+        # We want to run micro-benchmarks with release profile.
+        # We run with all features since we feature gate bench utils.
+        run: cargo codspeed build --features test-harness --profile release $BENCH_TARGETS
 
       - name: Run the benchmarks
         uses: CodSpeedHQ/action@v3
