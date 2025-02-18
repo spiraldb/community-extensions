@@ -4,12 +4,13 @@ use std::time::{Duration, Instant};
 use bench_vortex::display::{print_measurements_json, render_table, DisplayFormat};
 use bench_vortex::measurements::QueryMeasurement;
 use bench_vortex::tpch::dbgen::{DBGen, DBGenOptions};
+use bench_vortex::tpch::duckdb::{generate_tpch, DuckdbTpchOptions};
 use bench_vortex::tpch::{
     load_datasets, run_tpch_query, tpch_queries, EXPECTED_ROW_COUNTS_SF1, EXPECTED_ROW_COUNTS_SF10,
     TPC_H_ROW_COUNT_ARRAY_LENGTH,
 };
 use bench_vortex::{default_env_filter, feature_flagged_allocator, setup_logger, Format};
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use indicatif::ProgressBar;
 use itertools::Itertools;
 use tokio::runtime::Builder;
@@ -44,6 +45,15 @@ struct Args {
     display_format: DisplayFormat,
     #[arg(long, default_value = "false")]
     emulate_object_store: bool,
+    #[arg(long, default_value_t, value_enum)]
+    data_generator: DataGenerator,
+}
+
+#[derive(ValueEnum, Default, Clone, Debug)]
+pub enum DataGenerator {
+    #[default]
+    Dbgen,
+    Duckdb,
 }
 
 fn main() -> ExitCode {
@@ -69,8 +79,18 @@ fn main() -> ExitCode {
 
     let url = match args.use_remote_data_dir {
         None => {
-            let db_gen_options = DBGenOptions::default().with_scale_factor(args.scale_factor);
-            let data_dir = DBGen::new(db_gen_options).generate().unwrap();
+            let data_dir = match args.data_generator {
+                DataGenerator::Duckdb => {
+                    generate_tpch(DuckdbTpchOptions::default().with_scale_factor(args.scale_factor))
+                        .unwrap()
+                }
+                DataGenerator::Dbgen => {
+                    let db_gen_options =
+                        DBGenOptions::default().with_scale_factor(args.scale_factor);
+                    DBGen::new(db_gen_options).generate().unwrap()
+                }
+            };
+
             eprintln!(
                 "Using existing or generating new files located at {}.",
                 data_dir.display()
