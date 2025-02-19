@@ -1,4 +1,4 @@
-use std::fmt;
+use std::fmt::{self};
 
 use humansize::{format_size, DECIMAL};
 use serde::ser::Error;
@@ -11,17 +11,12 @@ use crate::vtable::EncodingVTable;
 use crate::Array;
 
 impl Array {
-    pub fn tree_display(&self) -> TreeDisplayWrapper {
+    pub fn tree_display(&self) -> impl fmt::Display + use<'_> {
         TreeDisplayWrapper(self)
     }
 }
 
-pub struct TreeDisplayWrapper<'a>(&'a Array);
-impl<'a> TreeDisplayWrapper<'a> {
-    pub fn new(array: &'a Array) -> Self {
-        Self(array)
-    }
-}
+pub struct TreeDisplayWrapper<'a>(pub &'a Array);
 
 impl fmt::Display for TreeDisplayWrapper<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
