@@ -4,7 +4,7 @@ use vortex_scalar::Scalar;
 
 use crate::arrays::{ConstantArray, ConstantEncoding};
 use crate::compute::{BinaryBooleanFn, BinaryOperator};
-use crate::{Array, ArrayRef, IntoArray};
+use crate::{Array, ArrayRef};
 
 impl BinaryBooleanFn<&ConstantArray> for ConstantEncoding {
     fn binary_boolean(
@@ -81,7 +81,7 @@ mod test {
     use crate::arrays::BoolArray;
     use crate::canonical::ToCanonical;
     use crate::compute::{and, or, scalar_at};
-    use crate::{Array, ArrayRef, IntoArray};
+    use crate::{Array, ArrayRef};
 
     #[rstest]
     #[case(ConstantArray::new(true, 4).into_array(), BoolArray::from_iter([Some(true), Some(false), Some(true), Some(false)].into_iter()).into_array()
