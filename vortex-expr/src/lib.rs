@@ -53,7 +53,7 @@ pub trait VortexExpr: Debug + Send + Sync + DynEq + DynHash + Display {
     ///
     fn evaluate(&self, batch: &dyn Array) -> VortexResult<ArrayRef> {
         let result = self.unchecked_evaluate(batch)?;
-        debug_assert_eq!(
+        assert_eq!(
             result.dtype(),
             &self.return_dtype(batch.dtype())?,
             "Expression {} returned dtype {} but declared return_dtype of {}",
