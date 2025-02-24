@@ -5,7 +5,7 @@ use std::fmt::Debug;
 use vortex_array::arrays::ConstantArray;
 use vortex_array::compute::{
     between, filter, scalar_at, slice, take, BetweenFn, BetweenOptions, CompareFn, FilterFn,
-    IsConstantFn, ScalarAtFn, SliceFn, StrictComparison, TakeFn,
+    ScalarAtFn, SliceFn, StrictComparison, TakeFn,
 };
 use vortex_array::variants::PrimitiveArrayTrait;
 use vortex_array::vtable::ComputeVTable;
@@ -27,10 +27,6 @@ impl ComputeVTable for ALPEncoding {
     }
 
     fn filter_fn(&self) -> Option<&dyn FilterFn<&dyn Array>> {
-        Some(self)
-    }
-
-    fn is_constant_fn(&self) -> Option<&dyn IsConstantFn<&dyn Array>> {
         Some(self)
     }
 
@@ -118,12 +114,6 @@ impl FilterFn<&ALPArray> for ALPEncoding {
             ALPArray::try_new(filter(array.encoded(), mask)?, array.exponents(), patches)?
                 .into_array(),
         )
-    }
-}
-
-impl IsConstantFn<&ALPArray> for ALPEncoding {
-    fn is_constant(&self, _array: &ALPArray) -> VortexResult<Option<bool>> {
-        Ok(None)
     }
 }
 
