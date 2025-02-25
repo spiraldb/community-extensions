@@ -74,7 +74,7 @@ clap = "4"
 compio = { version = "0.13", features = ["io-uring"], default-features = false }
 crossterm = "0.28"
 datafusion = { version = "45", default-features = false }
-datafusion-common = "45"
+datafusion-common = { version = "45", default-features = false }
 datafusion-execution = "45"
 datafusion-expr = "45"
 datafusion-physical-expr = "45"
