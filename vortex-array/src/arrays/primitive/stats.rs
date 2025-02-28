@@ -10,7 +10,6 @@ use crate::Array;
 use crate::arrays::PrimitiveEncoding;
 use crate::arrays::primitive::PrimitiveArray;
 use crate::compute::min_max;
-use crate::nbytes::NBytes;
 use crate::stats::{Precision, Stat, StatsSet};
 use crate::variants::PrimitiveArrayTrait;
 use crate::vtable::StatisticsVTable;
@@ -27,10 +26,6 @@ impl<T> PStatsType for T where
 
 impl StatisticsVTable<&PrimitiveArray> for PrimitiveEncoding {
     fn compute_statistics(&self, array: &PrimitiveArray, stat: Stat) -> VortexResult<StatsSet> {
-        if stat == Stat::UncompressedSizeInBytes {
-            return Ok(StatsSet::of(stat, Precision::exact(array.nbytes())));
-        }
-
         if stat == Stat::Max || stat == Stat::Min {
             min_max(array)?;
             return Ok(array.statistics().to_owned());
@@ -67,15 +62,9 @@ impl<T: PStatsType + PartialEq> StatisticsVTable<&[T]> for PrimitiveEncoding {
         }
 
         Ok(match stat {
-            Stat::IsConstant => {
-                let first = array[0];
-                let is_constant = array.iter().all(|x| first.is_eq(*x));
-                StatsSet::of(Stat::IsConstant, Precision::exact(is_constant))
-            }
             Stat::NullCount => StatsSet::of(Stat::NullCount, Precision::exact(0u64)),
             Stat::IsSorted => compute_is_sorted(array.iter().copied()),
             Stat::IsStrictSorted => compute_is_strict_sorted(array.iter().copied()),
-            Stat::UncompressedSizeInBytes => StatsSet::default(),
             _ => unreachable!("already handled above"),
         })
     }
@@ -90,7 +79,7 @@ impl<T: PStatsType> StatisticsVTable<&NullableValues<'_, T>> for PrimitiveEncodi
         stat: Stat,
     ) -> VortexResult<StatsSet> {
         let values = nulls.0;
-        if values.is_empty() || stat == Stat::UncompressedSizeInBytes {
+        if values.is_empty() {
             return Ok(StatsSet::default());
         }
 

@@ -2,8 +2,7 @@ use vortex_dtype::DType;
 use vortex_error::VortexResult;
 use vortex_mask::Mask;
 
-use crate::nbytes::NBytes;
-use crate::stats::{ArrayStats, Precision, Stat, StatsSet, StatsSetRef};
+use crate::stats::{ArrayStats, Stat, StatsSet, StatsSetRef};
 use crate::variants::NullArrayTrait;
 use crate::vtable::{EncodingVTable, StatisticsVTable, VTableRef};
 use crate::{
@@ -88,11 +87,7 @@ impl ArrayValidityImpl for NullArray {
 }
 
 impl StatisticsVTable<&NullArray> for NullEncoding {
-    fn compute_statistics(&self, array: &NullArray, stat: Stat) -> VortexResult<StatsSet> {
-        if stat == Stat::UncompressedSizeInBytes {
-            return Ok(StatsSet::of(stat, Precision::exact(array.nbytes())));
-        }
-
+    fn compute_statistics(&self, array: &NullArray, _stat: Stat) -> VortexResult<StatsSet> {
         Ok(StatsSet::nulls(array.len()))
     }
 }
