@@ -1,4 +1,5 @@
 from . import _lib
+from ._lib import register
 from ._lib.arrays import (
     BinaryTypeArray,
     BoolTypeArray,
@@ -51,11 +52,12 @@ from ._lib.encoding import (
     ExtensionEncoding,
     FastLanesBitPackedEncoding,
     FastLanesDeltaEncoding,
-    FastLanesForEncoding,
+    FastLanesFoREncoding,
     FsstEncoding,
     ListEncoding,
     NullEncoding,
     PrimitiveEncoding,
+    PyEncoding,
     RunEndEncoding,
     SparseEncoding,
     StructEncoding,
@@ -82,6 +84,7 @@ assert _lib, "Ensure we eagerly import the Vortex native library"
 __all__ = [
     "array",
     "compress",
+    "register",
     # Arrays
     "Array",
     "NullTypeArray",
@@ -132,6 +135,7 @@ __all__ = [
     "StructEncoding",
     "ListEncoding",
     "ExtensionEncoding",
+    "PyEncoding",
     "AlpEncoding",
     "AlpRdEncoding",
     "DateTimePartsEncoding",
@@ -142,7 +146,7 @@ __all__ = [
     "ZigZagEncoding",
     "FastLanesBitPackedEncoding",
     "FastLanesDeltaEncoding",
-    "FastLanesForEncoding",
+    "FastLanesFoREncoding",
     # Scalars
     "scalar",
     "Scalar",
