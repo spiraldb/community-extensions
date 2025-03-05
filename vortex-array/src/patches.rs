@@ -217,8 +217,8 @@ impl Patches {
         }
     }
 
-    /// Return the insertion point of [index] in the [Self::indices].
-    fn search_index(&self, index: usize) -> VortexResult<SearchResult> {
+    /// Return the insertion point of `index` in the [Self::indices].
+    pub fn search_index(&self, index: usize) -> VortexResult<SearchResult> {
         search_sorted_usize(&self.indices, index + self.offset, SearchSortedSide::Left)
     }
 
