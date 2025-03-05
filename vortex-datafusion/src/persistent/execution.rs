@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::fmt;
 use std::sync::Arc;
 
@@ -11,7 +12,9 @@ use datafusion_physical_expr::{EquivalenceProperties, Partitioning, PhysicalExpr
 use datafusion_physical_plan::execution_plan::{Boundedness, EmissionType};
 use datafusion_physical_plan::metrics::MetricsSet;
 use datafusion_physical_plan::{DisplayAs, DisplayFormatType, ExecutionPlan, PlanProperties};
+use itertools::Itertools;
 use object_store::ObjectStoreScheme;
+use vortex_error::VortexExpect;
 use vortex_expr::datafusion::convert_expr_to_vortex;
 use vortex_expr::{VortexExpr, and};
 
@@ -212,18 +215,56 @@ fn repartition_by_size(
 ) -> Vec<Vec<PartitionedFile>> {
     let total_file_count = all_files.len();
     let total_size = all_files.iter().map(|f| f.object_meta.size).sum::<usize>();
-    let target_partition_size = total_size / (desired_partitions + 1);
+    let target_partition_size = total_size / desired_partitions;
 
     let mut partitions = Vec::with_capacity(desired_partitions);
 
     let mut curr_partition_size = 0;
     let mut curr_partition = Vec::default();
 
-    for file in all_files.into_iter() {
-        curr_partition_size += file.object_meta.size;
-        curr_partition.push(file.clone());
+    let mut all_files = VecDeque::from_iter(
+        all_files
+            .into_iter()
+            .sorted_unstable_by_key(|f| f.object_meta.size),
+    );
 
-        if curr_partition_size >= target_partition_size {
+    while !all_files.is_empty() && partitions.len() < desired_partitions {
+        // If the current partition is empty, we want to bootstrap it with the biggest file we have leftover.
+        let file = if curr_partition.is_empty() {
+            all_files.pop_back()
+        // If we already have files in the partition, we try and fill it up.
+        } else {
+            // Peak at the biggest file left
+            let biggest_file_size = all_files
+                .back()
+                .vortex_expect("We must have at least one item")
+                .object_meta
+                .size;
+
+            let smallest_file_size = all_files
+                .front()
+                .vortex_expect("We must have at least one item")
+                .object_meta
+                .size;
+
+            // We try and find a file on either end that fits in the partition
+            if curr_partition_size + biggest_file_size >= target_partition_size {
+                all_files.pop_front()
+            } else if curr_partition_size + smallest_file_size >= target_partition_size {
+                all_files.pop_back()
+            } else {
+                None
+            }
+        };
+
+        // Add a file to the partition
+        if let Some(file) = file {
+            curr_partition_size += file.object_meta.size;
+            curr_partition.push(file.clone());
+        }
+
+        // If the partition is full, move on to the next one
+        if curr_partition_size >= target_partition_size || file.is_none() {
             curr_partition_size = 0;
             partitions.push(std::mem::take(&mut curr_partition));
         }
@@ -232,7 +273,6 @@ fn repartition_by_size(
     // If we we're still missing the last partition
     if !curr_partition.is_empty() && partitions.len() != desired_partitions {
         partitions.push(std::mem::take(&mut curr_partition));
-    // If we already have enough partitions
     } else if !curr_partition.is_empty() {
         for (idx, file) in curr_partition.into_iter().enumerate() {
             let new_part_idx = idx % partitions.len();
@@ -240,11 +280,12 @@ fn repartition_by_size(
         }
     }
 
+    for (idx, file) in all_files.into_iter().enumerate() {
+        let new_part_idx = idx % partitions.len();
+        partitions[new_part_idx].push(file.clone());
+    }
+
     // Assert that we have the correct number of partitions and that the total number of files is right
-    assert_eq!(
-        partitions.len(),
-        usize::min(desired_partitions, total_file_count)
-    );
     assert_eq!(total_file_count, partitions.iter().flatten().count());
 
     partitions
