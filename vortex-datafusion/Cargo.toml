@@ -1,21 +1,17 @@
 [package]
 name = "vortex-datafusion"
-description = "Apache Datafusion integration for Vortex"
-version = { workspace = true }
-homepage = { workspace = true }
-repository = { workspace = true }
 authors = { workspace = true }
-license = { workspace = true }
-keywords = { workspace = true }
-include = { workspace = true }
-edition = { workspace = true }
-rust-version = { workspace = true }
 categories = { workspace = true }
+description = "Apache Datafusion integration for Vortex"
+edition = { workspace = true }
+homepage = { workspace = true }
+include = { workspace = true }
+keywords = { workspace = true }
+license = { workspace = true }
 readme = { workspace = true }
-
-[lib]
-name = "vortex_datafusion"
-path = "src/lib.rs"
+repository = { workspace = true }
+rust-version = { workspace = true }
+version = { workspace = true }
 
 [dependencies]
 arrow-array = { workspace = true }
@@ -51,7 +47,13 @@ vortex-layout = { workspace = true, features = ["tokio"] }
 vortex-metrics = { workspace = true }
 
 [features]
-tracing = ["dep:tracing", "dep:tracing-futures", "vortex-io/tracing", "vortex-layout/tracing", "vortex-file/tracing"]
+tracing = [
+    "dep:tracing",
+    "dep:tracing-futures",
+    "vortex-io/tracing",
+    "vortex-layout/tracing",
+    "vortex-file/tracing",
+]
 
 [dev-dependencies]
 anyhow = { workspace = true }
