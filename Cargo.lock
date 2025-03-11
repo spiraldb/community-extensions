@@ -3980,6 +3980,7 @@ dependencies = [
  "futures",
  "itertools 0.14.0",
  "log",
+ "mimalloc",
  "object_store",
  "pyo3",
  "pyo3-log",
