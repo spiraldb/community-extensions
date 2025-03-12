@@ -36,6 +36,8 @@ jobs:
     steps:
       - uses: runs-on/action@v1
       - uses: actions/checkout@v4
+        with:
+          submodules: "recursive"
       # rustup is pre-installed on the ubuntu24-full-x64 image.
 
       - name: Run ${{ matrix.name }} benchmark
