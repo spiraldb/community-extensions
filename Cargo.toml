@@ -74,6 +74,7 @@ chrono = "0.4.38"
 clap = "4"
 compio = { version = "0.14", features = ["io-uring"], default-features = false }
 crossterm = "0.28"
+dashmap = "6.1.0"
 datafusion = { version = "46", default-features = false }
 datafusion-common = { version = "46" }
 datafusion-execution = { version = "46" }
@@ -130,6 +131,7 @@ pyo3-log = "0.12.1"
 rancor = "0.1.0"
 rand = "0.9.0"
 rand_distr = "0.5"
+range_union_find = "0.5.0"
 ratatui = "0.29"
 rayon = "1.10.0"
 regex = "1.11.0"
