@@ -17,7 +17,6 @@ use crate::iter::{ArrayIterator, ArrayIteratorAdapter};
 use crate::nbytes::NBytes;
 use crate::stats::{ArrayStats, StatsSetRef};
 use crate::stream::{ArrayStream, ArrayStreamAdapter};
-use crate::validity::Validity;
 use crate::vtable::VTableRef;
 use crate::{Array, ArrayImpl, ArrayRef, ArrayStatisticsImpl, EmptyMetadata, Encoding, IntoArray};
 
@@ -240,14 +239,10 @@ impl ArrayValidityImpl for ChunkedArray {
     }
 
     fn _validity_mask(&self) -> VortexResult<Mask> {
-        // TODO(ngates): implement FromIterator<LogicalValidity> for LogicalValidity.
-        // TODO(ngates): or use a boolean array builder?
-        let validity: Validity = self
-            .chunks()
+        self.chunks()
             .iter()
             .map(|a| a.validity_mask())
-            .try_collect()?;
-        validity.to_logical(self.len())
+            .try_collect()
     }
 }
 
