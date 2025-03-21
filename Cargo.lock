@@ -4513,6 +4513,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "rstest_reuse"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b3a8fb4672e840a587a66fc577a5491375df51ddb88f2a2c2a792598c326fe14"
+dependencies = [
+ "quote",
+ "rand 0.8.5",
+ "syn 2.0.100",
+]
+
+[[package]]
 name = "rust_decimal"
 version = "1.36.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5778,6 +5789,7 @@ dependencies = [
  "rand 0.9.0",
  "rkyv 0.8.10",
  "rstest",
+ "rstest_reuse",
  "rustc-hash",
  "serde",
  "static_assertions",
@@ -6265,6 +6277,7 @@ dependencies = [
  "itertools 0.14.0",
  "rkyv 0.8.10",
  "rstest",
+ "rstest_reuse",
  "vortex-array",
  "vortex-buffer",
  "vortex-dtype",
