@@ -6043,6 +6043,7 @@ dependencies = [
 name = "vortex-ffi"
 version = "0.25.2"
 dependencies = [
+ "duckdb",
  "futures",
  "log",
  "object_store",
@@ -6052,6 +6053,7 @@ dependencies = [
  "tokio",
  "url",
  "vortex",
+ "vortex-duckdb",
 ]
 
 [[package]]
