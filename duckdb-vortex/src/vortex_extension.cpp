@@ -11,11 +11,8 @@
 
 #include "vortex.h"
 
-#include <expr/expr.hpp>
-
-extern "C" {
-const char *vortex_duckdb_hello();
-}
+#include "expr/expr.hpp"
+#include "rust_vector_buffer.hpp"
 
 #ifndef DUCKDB_EXTENSION_MAIN
 #error DUCKDB_EXTENSION_MAIN not defined

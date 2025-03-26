@@ -1,11 +1,14 @@
 mod data_chunk_adaptor;
+mod varbinview;
 
 use arrow_array::ArrayRef as ArrowArrayRef;
 use duckdb::core::{DataChunkHandle, SelectionVector};
 use duckdb::vtab::arrow::{
     WritableVector, flat_vector_to_arrow_array, write_arrow_array_to_vector,
 };
-use vortex_array::arrays::StructArray;
+use vortex_array::arrays::{
+    ChunkedArray, ChunkedEncoding, StructArray, VarBinViewArray, VarBinViewEncoding,
+};
 use vortex_array::arrow::FromArrowArray;
 use vortex_array::compute::{take, to_arrow_preferred, try_cast};
 use vortex_array::validity::Validity;
@@ -32,6 +35,18 @@ pub fn to_duckdb(array: ArrayRef, chunk: &mut dyn WritableVector) -> VortexResul
         let value = constant.to_duckdb_scalar();
         chunk.flat_vector().assign_to_constant(&value);
         Ok(())
+    } else if array.is_encoding(ChunkedEncoding.id()) {
+        array
+            .as_any()
+            .downcast_ref::<ChunkedArray>()
+            .vortex_expect("chunk checked")
+            .to_duckdb(chunk)
+    } else if array.is_encoding(VarBinViewEncoding.id()) {
+        array
+            .as_any()
+            .downcast_ref::<VarBinViewArray>()
+            .vortex_expect("varbinview id checked")
+            .to_duckdb(chunk)
     } else if array.is_encoding(DictEncoding.id()) {
         array
             .as_any()
@@ -40,6 +55,17 @@ pub fn to_duckdb(array: ArrayRef, chunk: &mut dyn WritableVector) -> VortexResul
             .to_duckdb(chunk)
     } else {
         to_arrow_preferred(&array)?.to_duckdb(chunk)
+    }
+}
+
+impl ToDuckDB for ChunkedArray {
+    fn to_duckdb(&self, chunk: &mut dyn WritableVector) -> VortexResult<()> {
+        // TODO(joe): support multi-chunk arrays without canonical.
+        if self.chunks().len() > 1 {
+            to_arrow_preferred(self)?.to_duckdb(chunk)
+        } else {
+            to_duckdb(self.chunks()[0].clone(), chunk)
+        }
     }
 }
 
@@ -133,7 +159,6 @@ impl FromDuckDB<SizedFlatVector> for ArrayRef {
 
 #[cfg(test)]
 mod tests {
-
     use duckdb::core::{DataChunkHandle, LogicalTypeHandle, LogicalTypeId};
     use vortex_array::arrays::{
         BoolArray, ConstantArray, PrimitiveArray, StructArray, VarBinArray,
