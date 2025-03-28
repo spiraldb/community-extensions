@@ -6246,6 +6246,8 @@ dependencies = [
  "log",
  "object_store",
  "prost",
+ "simplelog",
+ "thiserror 2.0.12",
  "tokio",
  "url",
  "vortex",
