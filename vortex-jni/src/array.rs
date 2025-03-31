@@ -1,12 +1,16 @@
+use arrow::datatypes::{DataType, FieldRef, Fields};
+use arrow::ffi::{FFI_ArrowArray, FFI_ArrowSchema};
 use jni::JNIEnv;
 use jni::objects::{JClass, JIntArray, JLongArray, JObject};
 use jni::sys::{
     JNI_FALSE, JNI_TRUE, jboolean, jbyte, jbyteArray, jdouble, jfloat, jint, jlong, jshort, jstring,
 };
 use vortex::arrays::{VarBinArray, VarBinViewArray};
-use vortex::compute::{scalar_at, slice};
+use vortex::arrow::IntoArrowArray;
+use vortex::compute::{preferred_arrow_data_type, scalar_at, slice};
 use vortex::dtype::DType;
-use vortex::error::{VortexExpect, VortexResult};
+use vortex::error::{VortexError, VortexExpect, VortexResult};
+use vortex::nbytes::NBytes;
 use vortex::{Array, ArrayRef, ArrayVariants};
 
 use crate::errors::try_or_throw;
@@ -51,6 +55,113 @@ pub extern "system" fn Java_dev_vortex_jni_NativeArrayMethods_free(
     array_ptr: jlong,
 ) {
     drop(unsafe { NativeArray::from_raw(array_ptr) });
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_vortex_jni_NativeArrayMethods_nbytes(
+    _env: JNIEnv,
+    _class: JClass,
+    array_ptr: jlong,
+) -> jlong {
+    let array_ref = unsafe { NativeArray::from_ptr(array_ptr) };
+    array_ref.inner.nbytes() as jlong
+}
+
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_vortex_jni_NativeArrayMethods_exportToArrow<'local>(
+    mut env: JNIEnv<'local>,
+    _class: JClass,
+    array_ptr: jlong,
+    arrow_schema_ptr: JLongArray<'local>,
+    arrow_array_ptr: JLongArray<'local>,
+) {
+    let array_ref = unsafe { NativeArray::from_ptr(array_ptr) };
+
+    try_or_throw(&mut env, |env| {
+        let preferred_arrow_type = preferred_arrow_data_type(array_ref.inner.as_ref())?;
+        let viewless_arrow_type = data_type_no_views(preferred_arrow_type);
+
+        let arrow_array = array_ref.inner.clone().into_arrow(&viewless_arrow_type)?;
+        let (ffi_array, ffi_schema) =
+            arrow::ffi::to_ffi(&arrow_array.to_data()).map_err(VortexError::from)?;
+
+        let ffi_schema_ptr = Box::into_raw(Box::new(ffi_schema));
+        let ffi_array_ptr = Box::into_raw(Box::new(ffi_array));
+
+        // Return native Arrow FFI pointers to caller.
+        env.set_long_array_region(arrow_schema_ptr, 0, &[ffi_schema_ptr as jlong])?;
+        env.set_long_array_region(arrow_array_ptr, 0, &[ffi_array_ptr as jlong])?;
+        Ok(())
+    });
+}
+
+/// Visit the potentially nested DataType, replacing all instances of Utf8View and BinaryView
+/// with non-Viewable equivalents. This is necessary because Spark and Iceberg do not support
+/// Utf8View.
+fn data_type_no_views(data_type: DataType) -> DataType {
+    match data_type {
+        DataType::BinaryView => DataType::Binary,
+        DataType::Utf8View => DataType::Utf8,
+        // List
+        DataType::List(inner) | DataType::ListView(inner) => {
+            let new_inner = (*inner)
+                .clone()
+                .with_data_type(data_type_no_views(inner.data_type().clone()));
+            DataType::List(FieldRef::new(new_inner))
+        }
+        // LargeList
+        DataType::LargeList(inner) | DataType::LargeListView(inner) => {
+            let new_inner = (*inner)
+                .clone()
+                .with_data_type(data_type_no_views(inner.data_type().clone()));
+            DataType::LargeList(FieldRef::new(new_inner))
+        }
+        DataType::Struct(fields) => {
+            // Things
+            let viewless_fields: Vec<FieldRef> = fields
+                .iter()
+                .map(|field_ref| {
+                    let field = (*field_ref.clone()).clone();
+                    let data_type = field.data_type().clone();
+                    let field = field.with_data_type(data_type_no_views(data_type));
+                    FieldRef::new(field)
+                })
+                .collect();
+            DataType::Struct(Fields::from(viewless_fields))
+        }
+        DataType::FixedSizeList(..) => unreachable!("Vortex never returns FixedSizeList"),
+        DataType::Union(..) => unreachable!("Vortex never returns Union"),
+        DataType::Dictionary(..) => unreachable!("Vortex never returns Dictionary"),
+        DataType::Decimal128(..) => unreachable!("Vortex never returns Decimal128"),
+        DataType::Decimal256(..) => unreachable!("Vortex never returns Decimal256"),
+        DataType::Map(..) => unreachable!("Vortex never returns Map"),
+        DataType::RunEndEncoded(..) => unreachable!("Vortex never returns RunEndEncoded"),
+        // The non-nested non-view types stay the same.
+        dt => dt,
+    }
+}
+
+/// Drop the native memory holding an Arrow FFI Schema behind the pointer.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_vortex_jni_NativeArrayMethods_dropArrowSchema(
+    _env: JNIEnv,
+    _class: JClass,
+    schema_ptr: jlong,
+) {
+    drop(unsafe { Box::from_raw(schema_ptr as *mut FFI_ArrowSchema) });
+}
+
+/// Drop FFI_ArrowArray behind the pointer.
+///
+/// Note that this doesn't not free the memory backing the arrow data buffers, those
+/// are still backed by Vortex Buffers.
+#[unsafe(no_mangle)]
+pub extern "system" fn Java_dev_vortex_jni_NativeArrayMethods_dropArrowArray(
+    _env: JNIEnv,
+    _class: JClass,
+    array_ptr: jlong,
+) {
+    drop(unsafe { Box::from_raw(array_ptr as *mut FFI_ArrowArray) });
 }
 
 #[unsafe(no_mangle)]
