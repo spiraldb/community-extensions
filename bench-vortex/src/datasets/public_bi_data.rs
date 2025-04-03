@@ -554,10 +554,10 @@ impl BenchmarkDataset for PBIDataset {
 
         let arrays = stream::iter(self.list_files(FileType::Vortex))
             .map(|f| async move {
-                VortexOpenOptions::file(TokioFile::open(f)?)
-                    .open()
+                VortexOpenOptions::file()
+                    .open(TokioFile::open(f)?)
                     .await?
-                    .scan()
+                    .scan()?
                     .read_all()
                     .await
             })

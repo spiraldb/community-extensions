@@ -8,13 +8,13 @@ use datafusion::datasource::physical_plan::{FileOpener, FileScanConfig, FileSour
 use datafusion_common::{Result as DFResult, Statistics};
 use datafusion_physical_plan::metrics::ExecutionPlanMetricsSet;
 use itertools::Itertools as _;
-use object_store::{ObjectStore, ObjectStoreScheme};
+use object_store::ObjectStore;
 use vortex_error::VortexExpect as _;
 use vortex_expr::{Identity, VortexExpr};
 use vortex_file::VORTEX_FILE_EXTENSION;
 use vortex_metrics::VortexMetrics;
 
-use super::cache::FooterCache;
+use super::cache::VortexFileCache;
 use super::config::{ConfigProjection, FileScanConfigExt};
 use super::metrics::PARTITION_LABEL;
 use super::opener::VortexFileOpener;
@@ -24,7 +24,7 @@ use super::opener::VortexFileOpener;
 /// [`DataSourceExec`]: datafusion_physical_plan::source::DataSourceExec
 #[derive(Clone)]
 pub struct VortexSource {
-    pub(crate) footer_cache: FooterCache,
+    pub(crate) file_cache: VortexFileCache,
     pub(crate) predicate: Option<Arc<dyn VortexExpr>>,
     pub(crate) projection: Option<Arc<dyn VortexExpr>>,
     pub(crate) batch_size: Option<usize>,
@@ -35,9 +35,9 @@ pub struct VortexSource {
 }
 
 impl VortexSource {
-    pub(crate) fn new(footer_cache: FooterCache, metrics: VortexMetrics) -> Self {
+    pub(crate) fn new(file_cache: VortexFileCache, metrics: VortexMetrics) -> Self {
         Self {
-            footer_cache,
+            file_cache,
             metrics,
             projection: None,
             batch_size: None,
@@ -60,13 +60,9 @@ impl FileSource for VortexSource {
     fn create_file_opener(
         &self,
         object_store: Arc<dyn ObjectStore>,
-        base_config: &FileScanConfig,
+        _base_config: &FileScanConfig,
         partition: usize,
     ) -> Arc<dyn FileOpener> {
-        let (scheme, _) = ObjectStoreScheme::parse(base_config.object_store_url.as_ref())
-            .ok()
-            .vortex_expect("Couldn't parse object store URL");
-
         let partition_metrics = self
             .metrics
             .child_with_tags([(PARTITION_LABEL, partition.to_string())].into_iter());
@@ -76,11 +72,10 @@ impl FileSource for VortexSource {
             .vortex_expect("batch_size must be supplied to VortexSource");
 
         let opener = VortexFileOpener::new(
-            scheme,
             object_store,
             self.projection.clone().unwrap_or_else(Identity::new_expr),
             self.predicate.clone(),
-            self.footer_cache.clone(),
+            self.file_cache.clone(),
             self.arrow_schema
                 .clone()
                 .vortex_expect("We should have a schema here"),
@@ -113,7 +108,6 @@ impl FileSource for VortexSource {
             arrow_schema,
             constraints: _constraints,
             statistics,
-            orderings: _,
             projection_expr,
         } = config.project_for_vortex();
 

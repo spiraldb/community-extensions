@@ -15,8 +15,7 @@ use vortex::aliases::hash_map::HashMap;
 use vortex::dtype::DType;
 use vortex::error::{VortexError, VortexExpect, VortexResult, vortex_bail};
 use vortex::expr::{Identity, deserialize_expr, select};
-use vortex::file::{GenericVortexFile, VortexFile, VortexOpenOptions};
-use vortex::io::ObjectStoreReadAt;
+use vortex::file::{VortexFile, VortexOpenOptions};
 use vortex::proto::expr::Expr;
 use vortex::stream::ArrayStreamExt;
 
@@ -25,11 +24,11 @@ use crate::block_on;
 use crate::errors::try_or_throw;
 
 pub struct NativeFile {
-    inner: VortexFile<GenericVortexFile<ObjectStoreReadAt>>,
+    inner: VortexFile,
 }
 
 impl NativeFile {
-    pub fn new(file: VortexFile<GenericVortexFile<ObjectStoreReadAt>>) -> Box<Self> {
+    pub fn new(file: VortexFile) -> Box<Self> {
         Box::new(NativeFile { inner: file })
     }
 
@@ -82,13 +81,12 @@ pub extern "system" fn Java_dev_vortex_jni_NativeFileMethods_open(
         }
 
         let start = std::time::Instant::now();
-        let (store, scheme) = make_object_store(&url, &properties)?;
+        let (store, _scheme) = make_object_store(&url, &properties)?;
         let duration = std::time::Instant::now().duration_since(start);
         log::debug!("make_object_store latency = {duration:?}");
-        let reader = ObjectStoreReadAt::new(store.clone(), url.path().into(), Some(scheme));
         let open_file = block_on(
             "VortexOpenOptions.open()",
-            VortexOpenOptions::file(reader).open(),
+            VortexOpenOptions::file().open_object_store(&store, url.path()),
         )?;
 
         Ok(NativeFile::new(open_file).into_raw())
@@ -124,7 +122,7 @@ pub extern "system" fn Java_dev_vortex_jni_NativeFileMethods_scan(
 ) -> jlong {
     // Return a new pointer to some native memory for the scan.
     let file = unsafe { NativeFile::from_ptr(pointer) };
-    let mut scan_builder = file.inner.scan();
+    let mut scan_builder = file.inner.scan().vortex_expect("scan builder");
 
     try_or_throw(&mut env, |env| {
         // Apply the projection if provided
@@ -156,7 +154,7 @@ pub extern "system" fn Java_dev_vortex_jni_NativeFileMethods_scan(
 
         // Canonicalize first, to avoid needing to pay decoding cost for every access.
         let scan = scan_builder.with_canonicalize(true).build()?;
-        Ok(NativeArrayStream::new(scan.into_array_stream()?.boxed()).into_raw())
+        Ok(NativeArrayStream::new(scan.boxed()).into_raw())
     })
 }
 
