@@ -9,7 +9,10 @@
 #include "duckdb/main/extension_util.hpp"
 #include "vortex_extension.hpp"
 
+#include <filesystem>
+
 #include "vortex_common.hpp"
+#include "vortex_write.hpp"
 #include "expr/expr.hpp"
 
 #ifndef DUCKDB_EXTENSION_MAIN
@@ -140,19 +143,30 @@ static void ExtractVortexSchema(const DType *file_dtype, vector<LogicalType> &co
 		auto duckdb_type = reinterpret_cast<LogicalType *>(DType_to_duckdb_logical_type(field_dtype));
 
 		column_names.push_back(field_name);
-		column_types.push_back(*duckdb_type);
+		column_types.push_back(LogicalType(*duckdb_type));
 		DType_free(field_dtype);
+		delete duckdb_type;
 	}
 }
 
 std::string EnsureFileProtocol(const std::string &path) {
+	auto absolute_path = path;
 	const std::string prefix = "file://";
 
-	// Check if the string already starts with "file://"
-	if (path.size() >= prefix.size() && std::equal(prefix.begin(), prefix.end(), path.begin())) {
-		return path;
+	std::filesystem::path p = absolute_path;
+	if (!p.is_absolute()) {
+		try {
+			absolute_path = absolute(p).string();
+		} catch (const std::exception &e) {
+			throw InternalException(std::string("Error making path absolute: ") + e.what());
+		}
 	}
-	return prefix + path;
+
+	// Check if the string already starts with "file://"
+	if (absolute_path.size() >= prefix.size() && std::equal(prefix.begin(), prefix.end(), absolute_path.begin())) {
+		return absolute_path;
+	}
+	return prefix + absolute_path;
 }
 
 static unique_ptr<VortexFile> OpenFile(const std::string &filename, vector<LogicalType> &column_types,
@@ -345,9 +359,9 @@ void PushdownComplexFilter(ClientContext &context, LogicalGet &get, FunctionData
 /// Vortex files in SQL queries.
 void VortexExtension::Load(DuckDB &db) {
 	DatabaseInstance &instance = *db.instance;
-	TableFunction vortex_func("read_vortex", {LogicalType::VARCHAR}, VortexScanFunction, VortexBind);
+	TableFunction vortex_scan("read_vortex", {LogicalType::VARCHAR}, VortexScanFunction, VortexBind);
 
-	vortex_func.init_global = [](ClientContext &context,
+	vortex_scan.init_global = [](ClientContext &context,
 	                             TableFunctionInitInput &input) -> unique_ptr<GlobalTableFunctionState> {
 		auto &bind = input.bind_data->Cast<VortexBindData>();
 		auto state = make_uniq<VortexScanGlobalState>();
@@ -390,7 +404,7 @@ void VortexExtension::Load(DuckDB &db) {
 		return std::move(state);
 	};
 
-	vortex_func.init_local = [](ExecutionContext &context, TableFunctionInitInput &input,
+	vortex_scan.init_local = [](ExecutionContext &context, TableFunctionInitInput &input,
 	                            GlobalTableFunctionState *global_state) -> unique_ptr<LocalTableFunctionState> {
 		auto &v_global_state = global_state->Cast<VortexScanGlobalState>();
 
@@ -401,14 +415,15 @@ void VortexExtension::Load(DuckDB &db) {
 		return state;
 	};
 
-	vortex_func.pushdown_complex_filter = PushdownComplexFilter;
+	vortex_scan.pushdown_complex_filter = PushdownComplexFilter;
+	vortex_scan.projection_pushdown = true;
+	vortex_scan.cardinality = VortexCardinality;
+	vortex_scan.filter_pushdown = true;
+	vortex_scan.filter_prune = true;
 
-	vortex_func.projection_pushdown = true;
-	vortex_func.cardinality = VortexCardinality;
-	vortex_func.filter_pushdown = true;
-	vortex_func.filter_prune = true;
+	ExtensionUtil::RegisterFunction(instance, vortex_scan);
 
-	ExtensionUtil::RegisterFunction(instance, vortex_func);
+	RegisterVortexWriteFunction(instance);
 }
 
 /// Returns the name of the Vortex extension.

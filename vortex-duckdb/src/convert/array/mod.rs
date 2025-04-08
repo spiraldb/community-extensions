@@ -2,6 +2,7 @@ mod data_chunk_adaptor;
 mod varbinview;
 
 use arrow_array::ArrayRef as ArrowArrayRef;
+pub use data_chunk_adaptor::NamedDataChunk;
 use duckdb::core::{DataChunkHandle, FlatVector, SelectionVector};
 use duckdb::vtab::arrow::{
     WritableVector, flat_vector_to_arrow_array, write_arrow_array_to_vector,
@@ -23,9 +24,7 @@ use vortex_error::{VortexExpect, VortexResult, vortex_err};
 use vortex_fsst::{FSSTArray, FSSTEncoding};
 use vortex_mask::Mask;
 
-use crate::convert::array::data_chunk_adaptor::{
-    DataChunkHandleSlice, NamedDataChunk, SizedFlatVector,
-};
+use crate::convert::array::data_chunk_adaptor::{DataChunkHandleSlice, SizedFlatVector};
 use crate::convert::scalar::ToDuckDBScalar;
 use crate::{DUCKDB_STANDARD_VECTOR_SIZE, ToDuckDBType};
 
