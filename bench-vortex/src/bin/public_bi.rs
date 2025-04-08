@@ -1,24 +1,19 @@
-use std::fs::{self};
 use std::time::{Duration, Instant};
 
-use bench_vortex::clickbench::{self, Flavor, HITS_SCHEMA, clickbench_queries};
 use bench_vortex::display::{DisplayFormat, RatioMode, print_measurements_json, render_table};
 use bench_vortex::measurements::QueryMeasurement;
-use bench_vortex::metrics::{MetricsSetExt, export_plan_spans};
+use bench_vortex::metrics::MetricsSetExt;
+use bench_vortex::public_bi::{FileType, PBI_DATASETS, PBIDataset};
 use bench_vortex::{
-    Format, IdempotentPath as _, default_env_filter, execute_query, feature_flagged_allocator,
-    get_session_with_cache, make_object_store,
+    Format, default_env_filter, execute_query, feature_flagged_allocator, get_session_with_cache,
 };
 use clap::Parser;
-use datafusion_physical_plan::display::DisplayableExecutionPlan;
 use indicatif::ProgressBar;
-use itertools::Itertools;
-use log::warn;
+use itertools::Itertools as _;
 use tokio::runtime::Builder;
 use tracing::info_span;
-use tracing_futures::Instrument;
-use url::Url;
-use vortex::error::{VortexExpect, vortex_panic};
+use tracing_futures::Instrument as _;
+use vortex::error::vortex_panic;
 use vortex_datafusion::persistent::metrics::VortexMetricsFinder;
 
 feature_flagged_allocator!();
@@ -38,20 +33,12 @@ struct Args {
     verbose: bool,
     #[arg(short, long, default_value_t, value_enum)]
     display_format: DisplayFormat,
-    #[arg(short, long, value_delimiter = ',')]
-    queries: Option<Vec<usize>>,
-    #[arg(long, default_value_t = false)]
-    emit_plan: bool,
     #[arg(long, default_value_t = false)]
     emulate_object_store: bool,
-    #[arg(long)]
-    export_spans: bool,
-    #[arg(long, value_enum, default_value_t = Flavor::Partitioned)]
-    flavor: Flavor,
-    #[arg(long)]
-    use_remote_data_dir: Option<String>,
-    #[arg(long, default_value_t = false)]
-    single_file: bool,
+    #[arg(short, long, value_delimiter = ',')]
+    dataset: PBIDataset,
+    #[arg(short, long, value_delimiter = ',')]
+    queries: Option<Vec<usize>>,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -73,7 +60,7 @@ fn main() -> anyhow::Result<()> {
         let (layer, _guard) = tracing_chrome::ChromeLayerBuilder::new()
             .include_args(true)
             .trace_style(tracing_chrome::TraceStyle::Async)
-            .file("clickbench.trace.json")
+            .file("public_bi.trace.json")
             .build();
 
         let fmt_layer = tracing_subscriber::fmt::layer()
@@ -90,10 +77,6 @@ fn main() -> anyhow::Result<()> {
         _guard
     };
 
-    if args.only_vortex {
-        panic!("use `--formats vortex` instead of `--only-vortex`");
-    }
-
     let runtime = match args.threads {
         Some(0) => panic!("Can't use 0 threads for runtime"),
         Some(1) => Builder::new_current_thread().enable_all().build(),
@@ -105,89 +88,37 @@ fn main() -> anyhow::Result<()> {
     }
     .expect("Failed building the Runtime");
 
-    let url = match args.use_remote_data_dir {
-        None => {
-            let basepath = format!("clickbench_{}", args.flavor).to_data_path();
-            let client = reqwest::blocking::Client::default();
-
-            args.flavor.download(&client, basepath.as_path())?;
-            Url::parse(
-                ("file:".to_owned() + basepath.to_str().vortex_expect("path should be utf8") + "/")
-                    .as_ref(),
-            )
-            .unwrap()
-        }
-        Some(remote_data_dir) => {
-            // e.g. "s3://vortex-bench-dev-eu/parquet/"
-            if !remote_data_dir.ends_with("/") {
-                log::warn!(
-                    "Supply a --use-remote-data-dir argument which ends in a slash e.g. s3://vortex-bench-dev-eu/parquet/"
-                );
-            }
-            log::info!(
-                concat!(
-                    "Assuming data already exists at this remote (e.g. S3, GCS) URL: {}.\n",
-                    "If it does not, you should kill this command, locally generate the files (by running without\n",
-                    "--use-remote-data-dir) and upload data/clickbench/ to some remote location.",
-                ),
-                remote_data_dir,
-            );
-            Url::parse(&remote_data_dir).unwrap()
-        }
-    };
-
+    let pbi_dataset = PBI_DATASETS.get(args.dataset);
     let queries = match args.queries.clone() {
-        None => clickbench_queries(),
-        Some(queries) => clickbench_queries()
+        None => pbi_dataset.queries()?,
+        Some(queries) => pbi_dataset
+            .queries()?
             .into_iter()
             .filter(|(q_idx, _)| queries.iter().contains(q_idx))
             .collect(),
     };
 
     let progress_bar = ProgressBar::new((queries.len() * args.formats.len()) as u64);
-
     let mut all_measurements = Vec::default();
-
     let mut metrics = Vec::new();
-    for format in &args.formats {
-        let session_context = get_session_with_cache(args.emulate_object_store);
-        // register object store to the session
-        let _ = make_object_store(&session_context, &url)?;
-        let context = session_context.clone();
-        let mut plans = Vec::new();
 
-        match format {
-            Format::Parquet => runtime.block_on(async {
-                clickbench::register_parquet_files(
-                    &context,
-                    "hits",
-                    &url,
-                    &HITS_SCHEMA,
-                    args.single_file,
-                )
-                .await
-                .unwrap()
-            }),
-            Format::OnDiskVortex => {
-                runtime.block_on(async {
-                    if url.scheme() == "file" {
-                        clickbench::convert_parquet_to_vortex(&url.to_file_path().unwrap())
-                            .await
-                            .unwrap();
-                    }
-                    clickbench::register_vortex_files(
-                        context.clone(),
-                        "hits",
-                        &url,
-                        &HITS_SCHEMA,
-                        args.single_file,
-                    )
-                    .await
-                    .unwrap();
-                });
-            }
-            other => vortex_panic!("Format {other} isn't supported on ClickBench"),
-        }
+    let dataset = pbi_dataset.dataset().expect("failed to parse data urls");
+    tracing::info!("preparing files");
+    // download csvs, unzip, convert to parquet, and convert that to vortex
+    runtime.block_on(dataset.write_as_vortex());
+
+    for format in &args.formats {
+        let session = get_session_with_cache(args.emulate_object_store);
+        let file_type = match format {
+            Format::Csv => FileType::Csv,
+            Format::Parquet => FileType::Parquet,
+            Format::OnDiskVortex => FileType::Vortex,
+            other => vortex_panic!("Format {other} isn't supported on Public BI"),
+        };
+
+        runtime
+            .block_on(dataset.register_tables(&session, file_type))
+            .expect("failed to register");
 
         for (query_idx, query) in queries.clone().into_iter() {
             let mut fastest_result = Duration::from_millis(u64::MAX);
@@ -195,7 +126,7 @@ fn main() -> anyhow::Result<()> {
             for iteration in 0..args.iterations {
                 let exec_duration = runtime.block_on(async {
                     let start = Instant::now();
-                    let context = context.clone();
+                    let context = session.clone();
                     let query = query.clone();
                     last_plan = tokio::task::spawn(async move {
                         let (_, plan) = execute_query(&context, &query)
@@ -209,35 +140,10 @@ fn main() -> anyhow::Result<()> {
 
                     start.elapsed()
                 });
-
                 fastest_result = fastest_result.min(exec_duration);
             }
-
-            if let Some(plan) = last_plan.clone() {
-                plans.push((query_idx, plan));
-            }
             progress_bar.inc(1);
-
             let plan = last_plan.expect("must have at least one iteration");
-            if args.emit_plan {
-                fs::write(
-                    format!("clickbench_{format}_q{query_idx:02}.plan",),
-                    format!("{:#?}", plan),
-                )
-                .expect("Unable to write file");
-
-                fs::write(
-                    format!("clickbench_{format}_q{query_idx:02}.short.plan",),
-                    format!(
-                        "{}",
-                        DisplayableExecutionPlan::with_full_metrics(plan.as_ref())
-                            .set_show_schema(true)
-                            .set_show_statistics(true)
-                            .indent(true)
-                    ),
-                )
-                .expect("Unable to write file");
-            }
             metrics.push((
                 query_idx,
                 format,
@@ -248,14 +154,8 @@ fn main() -> anyhow::Result<()> {
                 storage: "nvme".to_string(),
                 time: fastest_result,
                 format: *format,
-                dataset: "clickbench".to_string(),
+                dataset: pbi_dataset.name.to_string(),
             });
-        }
-        if args.export_spans {
-            if let Err(e) = runtime.block_on(async move { export_plan_spans(*format, plans).await })
-            {
-                warn!("failed to export spans {e}");
-            }
         }
     }
 
