@@ -1,4 +1,5 @@
 mod data_chunk_adaptor;
+mod run_end;
 mod varbinview;
 
 use arrow_array::ArrayRef as ArrowArrayRef;
@@ -23,6 +24,7 @@ use vortex_dtype::{NativePType, match_each_integer_ptype};
 use vortex_error::{VortexExpect, VortexResult, vortex_err};
 use vortex_fsst::{FSSTArray, FSSTEncoding};
 use vortex_mask::Mask;
+use vortex_runend::{RunEndArray, RunEndEncoding};
 
 use crate::convert::array::data_chunk_adaptor::{DataChunkHandleSlice, SizedFlatVector};
 use crate::convert::scalar::ToDuckDBScalar;
@@ -100,6 +102,13 @@ fn try_to_duckdb(
         array
             .as_any()
             .downcast_ref::<DictArray>()
+            .vortex_expect("dict id checked")
+            .to_duckdb(chunk, cache)
+            .map(Some)
+    } else if array.is_encoding(RunEndEncoding.id()) {
+        array
+            .as_any()
+            .downcast_ref::<RunEndArray>()
             .vortex_expect("dict id checked")
             .to_duckdb(chunk, cache)
             .map(Some)
