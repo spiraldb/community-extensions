@@ -1,6 +1,9 @@
+mod chunked;
 mod data_chunk_adaptor;
 mod run_end;
 mod varbinview;
+
+use std::sync::Arc;
 
 use arrow_array::ArrayRef as ArrowArrayRef;
 pub use data_chunk_adaptor::NamedDataChunk;
@@ -18,7 +21,7 @@ use vortex_array::compute::{take, to_arrow_preferred};
 use vortex_array::validity::Validity;
 use vortex_array::variants::PrimitiveArrayTrait;
 use vortex_array::vtable::EncodingVTable;
-use vortex_array::{Array, ArrayRef, ArrayStatistics, IntoArray, ToCanonical};
+use vortex_array::{Array, ArrayRef, ArrayStatistics, Canonical, IntoArray, ToCanonical};
 use vortex_dict::{DictArray, DictEncoding};
 use vortex_dtype::{NativePType, match_each_integer_ptype};
 use vortex_error::{VortexExpect, VortexResult, vortex_err};
@@ -32,7 +35,8 @@ use crate::{DUCKDB_STANDARD_VECTOR_SIZE, ToDuckDBType};
 
 #[derive(Default)]
 pub struct ConversionCache {
-    pub values_cache: HashMap<usize, FlatVector>,
+    pub values_cache: HashMap<usize, (ArrayRef, FlatVector)>,
+    pub canonical_cache: HashMap<usize, (ArrayRef, Canonical)>,
     // A value which must be unique for a given duckdb pipeline.
     pub instance_id: u64,
 }
@@ -42,6 +46,39 @@ impl ConversionCache {
         Self {
             instance_id: id,
             ..Self::default()
+        }
+    }
+
+    fn insert_cached_array(
+        &mut self,
+        arr_value: usize,
+        array: &ArrayRef,
+    ) -> VortexResult<ArrayRef> {
+        let canon = array.to_canonical()?;
+        self.canonical_cache
+            .insert(arr_value, (array.clone(), canon));
+        Ok(self
+            .canonical_cache
+            .get(&arr_value)
+            .vortex_expect("just added")
+            .1
+            .clone()
+            .into_array())
+    }
+
+    pub fn cached_array(&mut self, array: &ArrayRef) -> VortexResult<ArrayRef> {
+        let arr_value = Arc::as_ptr(array).addr();
+
+        let entry = self.canonical_cache.get(&arr_value);
+        match entry {
+            None => self.insert_cached_array(arr_value, array),
+            Some((cached_array_ref, cached_canonical)) => {
+                if Arc::ptr_eq(cached_array_ref, array) {
+                    Ok(cached_canonical.clone().into_array())
+                } else {
+                    self.insert_cached_array(arr_value, array)
+                }
+            }
         }
     }
 }
@@ -117,19 +154,26 @@ fn try_to_duckdb(
     }
 }
 
-impl ToDuckDB for ChunkedArray {
-    fn to_duckdb(
-        &self,
-        chunk: &mut dyn WritableVector,
-        cache: &mut ConversionCache,
-    ) -> VortexResult<()> {
-        // TODO(joe): support multi-chunk arrays without canonical.
-        if self.chunks().len() > 1 {
-            to_duckdb(&self.to_canonical()?.into_array(), chunk, cache)
-        } else {
-            to_duckdb(&self.chunks()[0], chunk, cache)
-        }
-    }
+fn create_and_insert_duckdb_dict_value_array_into_cache(
+    values: &ArrayRef,
+    cache: &mut ConversionCache,
+    value_ptr: usize,
+) -> VortexResult<FlatVector> {
+    let mut value_vector = FlatVector::allocate_new_vector_with_capacity(
+        values.dtype().to_duckdb_type()?,
+        values.len(),
+    );
+    let cached_array = cache.cached_array(values)?;
+    to_duckdb(&cached_array, &mut value_vector, cache)?;
+    cache
+        .values_cache
+        .insert(value_ptr, (values.clone(), value_vector));
+    Ok(cache
+        .values_cache
+        .get(&value_ptr)
+        .vortex_expect("just added")
+        .1
+        .clone())
 }
 
 impl ToDuckDB for DictArray {
@@ -138,18 +182,20 @@ impl ToDuckDB for DictArray {
         chunk: &mut dyn WritableVector,
         cache: &mut ConversionCache,
     ) -> VortexResult<()> {
+        let values = self.values();
+
         // Note you can only have nullable values (not codes/selection vectors),
         // so we cannot assign a selection vector.
         if !self.codes().all_valid()? {
-            let values = take(self.values(), self.codes())?;
+            let values = take(values, self.codes())?;
             return to_duckdb(&values, chunk, cache);
         };
 
-        let value_ptr = (self.values().as_ref() as *const dyn Array as *const ()) as usize;
+        let value_ptr = Arc::as_ptr(values).addr();
 
         let mut vector: FlatVector = if self.values().len() <= DUCKDB_STANDARD_VECTOR_SIZE {
             // If the values fit into a single vector, put the values in the pre-allocated vector.
-            to_duckdb(self.values(), chunk, cache)?;
+            to_duckdb(values, chunk, cache)?;
             chunk.flat_vector()
         } else {
             // If the values don't fit allocated a larger vector and that the data chunk vector
@@ -157,26 +203,25 @@ impl ToDuckDB for DictArray {
             let entry = cache.values_cache.get(&value_ptr);
             let value_vector = match entry {
                 None => {
-                    let mut value_vector = FlatVector::allocate_new_vector_with_capacity(
-                        self.values().dtype().to_duckdb_type()?,
-                        self.values().len(),
-                    );
-                    to_duckdb(self.values(), &mut value_vector, cache)?;
-                    cache.values_cache.insert(value_ptr, value_vector);
-                    cache
-                        .values_cache
-                        .get(&value_ptr)
-                        .vortex_expect("just added")
+                    create_and_insert_duckdb_dict_value_array_into_cache(values, cache, value_ptr)?
                 }
-                Some(entry) => entry,
+                Some((cached_array_ref, entry)) => {
+                    if Arc::ptr_eq(cached_array_ref, values) {
+                        entry.clone()
+                    } else {
+                        create_and_insert_duckdb_dict_value_array_into_cache(
+                            values, cache, value_ptr,
+                        )?
+                    }
+                }
             };
 
             let mut vector = chunk.flat_vector();
-            vector.reference(value_vector);
+            vector.reference(&value_vector);
             vector
         };
         let sel = selection_vector_from_array(self.codes().to_primitive()?);
-        vector.slice(self.values().len() as u64, sel);
+        vector.slice(values.len() as u64, sel);
         vector.set_dictionary_id(format!("{}-{}", cache.instance_id, value_ptr));
         Ok(())
     }
