@@ -151,6 +151,7 @@ fn main() -> anyhow::Result<()> {
             ));
             all_measurements.push(QueryMeasurement {
                 query_idx,
+                engine: "DataFusion".to_owned(),
                 storage: "nvme".to_string(),
                 time: fastest_result,
                 format: *format,
@@ -176,7 +177,7 @@ fn main() -> anyhow::Result<()> {
                     }
                 }
             }
-            render_table(all_measurements, &args.formats, RatioMode::Time).unwrap()
+            render_table(all_measurements, &args.formats, RatioMode::Time, &None).unwrap()
         }
         DisplayFormat::GhJson => print_measurements_json(all_measurements).unwrap(),
     }

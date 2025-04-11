@@ -274,6 +274,7 @@ async fn bench_main(
 
             measurements.push(QueryMeasurement {
                 query_idx,
+                engine: "DataFusion".to_owned(),
                 storage,
                 time: fastest_result,
                 format,
@@ -337,7 +338,7 @@ async fn bench_main(
             for m in metrics.timestamps_removed().sorted_for_display().iter() {
                 println!("{}", m);
             }
-            render_table(measurements, &formats, RatioMode::Time).unwrap();
+            render_table(measurements, &formats, RatioMode::Time, &None).unwrap();
         }
         DisplayFormat::GhJson => {
             print_measurements_json(measurements).unwrap();
