@@ -5,6 +5,8 @@ use bench_vortex::clickbench::{Flavor, clickbench_queries};
 use bench_vortex::display::{DisplayFormat, RatioMode, print_measurements_json, render_table};
 use bench_vortex::measurements::QueryMeasurement;
 use bench_vortex::metrics::{MetricsSetExt, export_plan_spans};
+use bench_vortex::utils::constants::{CLICKBENCH_DATASET, STORAGE_NVME};
+use bench_vortex::utils::new_tokio_runtime;
 use bench_vortex::{
     Engine, Format, IdempotentPath, ddb, default_env_filter, df, feature_flagged_allocator,
 };
@@ -12,7 +14,6 @@ use clap::Parser;
 use datafusion::physical_plan::execution_plan;
 use indicatif::ProgressBar;
 use log::warn;
-use tokio::runtime::Builder;
 use tracing::info_span;
 use tracing_futures::Instrument;
 use url::Url;
@@ -144,19 +145,6 @@ fn main() -> anyhow::Result<()> {
         panic!("use `--formats vortex` instead of `--only-vortex`");
     }
 
-    let tokio_runtime = || {
-        match args.threads {
-            Some(0) => panic!("Can't use 0 threads for runtime"),
-            Some(1) => Builder::new_current_thread().enable_all().build(),
-            Some(n) => Builder::new_multi_thread()
-                .worker_threads(n)
-                .enable_all()
-                .build(),
-            None => Builder::new_multi_thread().enable_all().build(),
-        }
-        .expect("Failed building the Runtime")
-    };
-
     let queries = match &args.queries {
         None => clickbench_queries(),
         Some(queries) => clickbench_queries()
@@ -188,7 +176,7 @@ fn main() -> anyhow::Result<()> {
                 _ => unreachable!("engine not supported"),
             };
 
-            let tokio_runtime = tokio_runtime();
+            let tokio_runtime = new_tokio_runtime(args.threads);
 
             init_data_source(
                 *file_format,
@@ -405,7 +393,7 @@ fn execute_queries(
                     df::write_execution_plan(
                         *query_idx,
                         file_format,
-                        "clickbench",
+                        CLICKBENCH_DATASET,
                         &execution_plan,
                     );
                 }
@@ -419,10 +407,10 @@ fn execute_queries(
                 query_measurements.push(QueryMeasurement {
                     query_idx: *query_idx,
                     engine: Engine::DataFusion,
-                    storage: "nvme".to_owned(),
-                    time: fastest_run,
+                    storage: STORAGE_NVME.to_owned(),
+                    fastest_run,
                     format: file_format,
-                    dataset: "clickbench".to_owned(),
+                    dataset: CLICKBENCH_DATASET.to_owned(),
                 });
             }
 
@@ -442,10 +430,10 @@ fn execute_queries(
                 query_measurements.push(QueryMeasurement {
                     query_idx: *query_idx,
                     engine: Engine::DuckDB,
-                    storage: "nvme".to_string(),
-                    time: fastest_run,
+                    storage: STORAGE_NVME.to_owned(),
+                    fastest_run,
                     format: file_format,
-                    dataset: "clickbench".to_owned(),
+                    dataset: CLICKBENCH_DATASET.to_owned(),
                 });
             }
         };
