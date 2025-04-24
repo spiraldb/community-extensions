@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::process::ExitCode;
 use std::str::FromStr;
 use std::time::{Duration, Instant};
@@ -241,7 +242,7 @@ fn benchmark_duckdb_query(
     iterations: usize,
     file_format: Format,
     base_url: &Url,
-    duckdb_path: &std::path::Path,
+    duckdb_path: &Path,
 ) -> Duration {
     (0..iterations).fold(Duration::from_millis(u64::MAX), |fastest, _| {
         let duration = ddb::execute_tpch_query(queries, base_url, file_format, duckdb_path)
@@ -335,6 +336,12 @@ async fn bench_main(
         panic!("No queries to run")
     }
 
+    let duckdb_resolved_path = if targets.iter().any(|t| t.engine() == Engine::DuckDB) {
+        Some(ddb::build_and_get_executable_path(duckdb_path))
+    } else {
+        None
+    };
+
     for target in &targets {
         let engine = target.engine();
         let format = target.format();
@@ -395,8 +402,6 @@ async fn bench_main(
             }
             // TODO(joe); ensure that files are downloaded before running duckdb.
             Engine::DuckDB => {
-                let duckdb_executable = ddb::executable_path(duckdb_path);
-
                 for (query_idx, sql_queries) in tpch_queries.clone() {
                     let fastest_run = benchmark_duckdb_query(
                         query_idx,
@@ -404,7 +409,7 @@ async fn bench_main(
                         iterations,
                         format,
                         &url,
-                        &duckdb_executable,
+                        duckdb_resolved_path.as_ref().expect("path resoloved above"),
                     );
 
                     let storage = match bench_vortex::utils::url_scheme_to_storage(&url) {
