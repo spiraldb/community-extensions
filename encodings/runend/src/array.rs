@@ -9,7 +9,7 @@ use vortex_array::variants::{BoolArrayTrait, DecimalArrayTrait, PrimitiveArrayTr
 use vortex_array::vtable::VTableRef;
 use vortex_array::{
     Array, ArrayCanonicalImpl, ArrayImpl, ArrayRef, ArrayStatisticsImpl, ArrayValidityImpl,
-    ArrayVariantsImpl, Canonical, Encoding, IntoArray, SerdeMetadata, ToCanonical,
+    ArrayVariantsImpl, Canonical, Encoding, IntoArray, ProstMetadata, ToCanonical,
     try_from_array_ref,
 };
 use vortex_buffer::Buffer;
@@ -34,7 +34,7 @@ try_from_array_ref!(RunEndArray);
 pub struct RunEndEncoding;
 impl Encoding for RunEndEncoding {
     type Array = RunEndArray;
-    type Metadata = SerdeMetadata<RunEndMetadata>;
+    type Metadata = ProstMetadata<RunEndMetadata>;
 }
 
 impl RunEndArray {
