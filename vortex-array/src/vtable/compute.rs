@@ -1,7 +1,7 @@
 use crate::Array;
 use crate::compute::{
     CastFn, FillForwardFn, FillNullFn, InvertFn, IsConstantFn, IsSortedFn, LikeFn, MaskFn,
-    MinMaxFn, OptimizeFn, ScalarAtFn, SearchSortedFn, SearchSortedUsizeFn, SliceFn, SumFn, TakeFn,
+    MinMaxFn, OptimizeFn, ScalarAtFn, SearchSortedFn, SearchSortedUsizeFn, SliceFn, TakeFn,
     TakeFromFn, ToArrowFn, UncompressedSizeFn,
 };
 
@@ -101,13 +101,6 @@ pub trait ComputeVTable {
     ///
     /// See: [`SliceFn`].
     fn slice_fn(&self) -> Option<&dyn SliceFn<&dyn Array>> {
-        None
-    }
-
-    /// Perform a sum of an array.
-    ///
-    /// See: [SumFn].
-    fn sum_fn(&self) -> Option<&dyn SumFn<&dyn Array>> {
         None
     }
 
