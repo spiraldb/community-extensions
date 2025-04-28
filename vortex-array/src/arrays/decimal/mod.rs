@@ -10,11 +10,10 @@ use vortex_scalar::i256;
 use crate::array::{Array, ArrayCanonicalImpl, ArrayValidityImpl, ArrayVariantsImpl};
 use crate::arrays::decimal::serde::{DecimalMetadata, DecimalValueType};
 use crate::builders::ArrayBuilder;
-use crate::compute::{ScalarAtFn, SliceFn};
 use crate::stats::{ArrayStats, StatsSetRef};
 use crate::validity::Validity;
 use crate::variants::DecimalArrayTrait;
-use crate::vtable::{ComputeVTable, VTableRef};
+use crate::vtable::VTableRef;
 use crate::{
     ArrayBufferVisitor, ArrayChildVisitor, ArrayImpl, ArrayRef, ArrayStatisticsImpl,
     ArrayVisitorImpl, Canonical, Encoding, ProstMetadata, try_from_array_ref,
@@ -23,33 +22,13 @@ use crate::{
 #[derive(Debug)]
 pub struct DecimalEncoding;
 
-impl ComputeVTable for DecimalEncoding {
-    fn scalar_at_fn(&self) -> Option<&dyn ScalarAtFn<&dyn Array>> {
-        Some(self)
-    }
-
-    fn slice_fn(&self) -> Option<&dyn SliceFn<&dyn Array>> {
-        Some(self)
-    }
-
-    // TODO(aduffy): SumFn
-    // TODO(aduffy): BetweenFn
-    // TODO(aduffy): IsSortedFn
-    // TODO(aduffy): SearchSortedFn
-    // TODO(aduffy): CompareFn
-    // TODO(aduffy): IsConstant
-    // TODO(aduffy): BetweenFn
-    // TODO(aduffy): BinaryNumericFn
-    // TODO(aduffy): TakeFn
-}
-
 impl Encoding for DecimalEncoding {
     type Array = DecimalArray;
     type Metadata = ProstMetadata<DecimalMetadata>;
 }
 
 /// Type of decimal scalar values.
-pub trait NativeDecimalType {
+pub trait NativeDecimalType: Copy + Eq + Ord {
     const VALUES_TYPE: DecimalValueType;
 }
 
@@ -127,6 +106,10 @@ impl DecimalArray {
             DType::Decimal(decimal_dtype, _) => *decimal_dtype,
             _ => vortex_panic!("Expected Decimal dtype, got {:?}", self.dtype),
         }
+    }
+
+    pub fn values_type(&self) -> DecimalValueType {
+        self.values_type
     }
 
     pub fn precision(&self) -> u8 {
