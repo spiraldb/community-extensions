@@ -144,7 +144,7 @@ fn apply_byte_range(
         let row_range = byte_range_to_row_range(
             byte_range.start as u64..byte_range.end as u64,
             row_count,
-            file_meta.object_meta.size as u64,
+            file_meta.object_meta.size,
         );
 
         scan_builder.with_row_range(row_range)
