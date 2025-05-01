@@ -9,7 +9,6 @@ use bench_vortex::display::{DisplayFormat, print_measurements_json, render_table
 use bench_vortex::measurements::QueryMeasurement;
 use bench_vortex::metrics::{MetricsSetExt, export_plan_spans};
 use bench_vortex::tpch::dbgen::{DBGen, DBGenOptions};
-use bench_vortex::tpch::duckdb::{DuckdbTpchOptions, generate_tpch};
 use bench_vortex::tpch::{
     EXPECTED_ROW_COUNTS_SF1, EXPECTED_ROW_COUNTS_SF10, TPC_H_ROW_COUNT_ARRAY_LENGTH, load_datasets,
     run_tpch_query, tpch_queries,
@@ -74,6 +73,9 @@ struct Args {
     export_spans: bool,
     #[arg(long, default_value_t = false)]
     emit_plan: bool,
+    // Don't try to rebuild duckdb
+    #[arg(long)]
+    skip_rebuild: bool,
 }
 
 #[derive(ValueEnum, Default, Clone, Debug, PartialEq, Eq)]
@@ -126,14 +128,16 @@ fn main() -> anyhow::Result<()> {
     let url = match args.use_remote_data_dir {
         None => {
             let data_dir = match args.data_generator {
-                DataGenerator::Duckdb => generate_tpch(
-                    DuckdbTpchOptions::default().with_scale_factor(args.scale_factor),
-                )?,
                 DataGenerator::Dbgen => {
                     let db_gen_options =
                         DBGenOptions::default().with_scale_factor(args.scale_factor);
                     DBGen::new(db_gen_options).generate()?
                 }
+                DataGenerator::Duckdb => todo!("not implemented yet, will be support this soon"),
+                // TODO(joe) re-enable this once its correct.
+                // DataGenerator::Duckdb => {
+                //     generate_tpc(DuckdbTpcOptions::default().with_scale_factor(args.scale_factor))?
+                // }
             };
 
             info!(
@@ -141,8 +145,11 @@ fn main() -> anyhow::Result<()> {
                 data_dir.display()
             );
             Url::parse(
-                ("file:".to_owned() + data_dir.to_str().vortex_expect("path should be utf8") + "/")
-                    .as_ref(),
+                format!(
+                    "file:{}/",
+                    data_dir.to_str().vortex_expect("path should be utf8")
+                )
+                .as_ref(),
             )?
         }
         Some(tpch_benchmark_remote_data_dir) => {
@@ -181,6 +188,7 @@ fn main() -> anyhow::Result<()> {
         args.export_spans,
         args.emit_plan,
         &args.duckdb_path,
+        args.skip_rebuild,
     ))
 }
 
@@ -299,6 +307,7 @@ async fn bench_main(
     export_spans: bool,
     emit_plan: bool,
     duckdb_path: &Option<PathBuf>,
+    skip_duckdb_build: bool,
 ) -> anyhow::Result<()> {
     let expected_row_counts = if scale_factor == 1 {
         EXPECTED_ROW_COUNTS_SF1
@@ -340,7 +349,7 @@ async fn bench_main(
     let duckdb_resolved_path = targets
         .iter()
         .any(|t| t.engine() == Engine::DuckDB)
-        .then(|| ddb::build_and_get_executable_path(duckdb_path));
+        .then(|| ddb::build_and_get_executable_path(duckdb_path, skip_duckdb_build));
 
     for target in &targets {
         let engine = target.engine();

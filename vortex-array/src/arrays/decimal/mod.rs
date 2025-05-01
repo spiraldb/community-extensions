@@ -97,7 +97,7 @@ impl DecimalArray {
                 vortex_panic!(
                     "Buffer and validity length mismatch: buffer={}, validity={}",
                     buffer.len(),
-                    len
+                    len,
                 );
             }
         }
