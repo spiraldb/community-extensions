@@ -9,18 +9,14 @@ use crate::arrays::extension::ExtensionArray;
 use crate::compute::{
     FilterKernel, FilterKernelAdapter, IsConstantKernel, IsConstantKernelAdapter, IsConstantOpts,
     IsSortedKernel, IsSortedKernelAdapter, MinMaxKernel, MinMaxKernelAdapter, MinMaxResult,
-    ScalarAtFn, SumKernel, SumKernelAdapter, TakeFn, UncompressedSizeFn, filter, is_constant_opts,
-    is_sorted, is_strict_sorted, min_max, scalar_at, sum, take, uncompressed_size,
+    SumKernel, SumKernelAdapter, TakeFn, UncompressedSizeFn, filter, is_constant_opts, is_sorted,
+    is_strict_sorted, min_max, sum, take, uncompressed_size,
 };
 use crate::variants::ExtensionArrayTrait;
 use crate::vtable::ComputeVTable;
 use crate::{Array, ArrayRef, register_kernel};
 
 impl ComputeVTable for ExtensionEncoding {
-    fn scalar_at_fn(&self) -> Option<&dyn ScalarAtFn<&dyn Array>> {
-        Some(self)
-    }
-
     fn take_fn(&self) -> Option<&dyn TakeFn<&dyn Array>> {
         Some(self)
     }
@@ -40,15 +36,6 @@ impl FilterKernel for ExtensionEncoding {
 }
 
 register_kernel!(FilterKernelAdapter(ExtensionEncoding).lift());
-
-impl ScalarAtFn<&ExtensionArray> for ExtensionEncoding {
-    fn scalar_at(&self, array: &ExtensionArray, index: usize) -> VortexResult<Scalar> {
-        Ok(Scalar::extension(
-            array.ext_dtype().clone(),
-            scalar_at(array.storage(), index)?,
-        ))
-    }
-}
 
 impl SumKernel for ExtensionEncoding {
     fn sum(&self, array: &ExtensionArray) -> VortexResult<Scalar> {

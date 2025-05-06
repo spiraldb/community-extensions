@@ -1,8 +1,6 @@
 use crate::Array;
 use crate::arrays::PrimitiveEncoding;
-use crate::compute::{
-    NaNCountFn, ScalarAtFn, SearchSortedFn, SearchSortedUsizeFn, TakeFn, UncompressedSizeFn,
-};
+use crate::compute::{NaNCountFn, SearchSortedFn, SearchSortedUsizeFn, TakeFn, UncompressedSizeFn};
 use crate::vtable::ComputeVTable;
 
 mod between;
@@ -14,7 +12,6 @@ mod is_sorted;
 mod mask;
 mod min_max;
 mod nan_count;
-mod scalar_at;
 mod search_sorted;
 mod sum;
 mod take;
@@ -24,10 +21,6 @@ pub use is_constant::*;
 
 impl ComputeVTable for PrimitiveEncoding {
     fn nan_count_fn(&self) -> Option<&dyn NaNCountFn<&dyn Array>> {
-        Some(self)
-    }
-
-    fn scalar_at_fn(&self) -> Option<&dyn ScalarAtFn<&dyn Array>> {
         Some(self)
     }
 

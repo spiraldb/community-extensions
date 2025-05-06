@@ -6,33 +6,21 @@ mod min_max;
 mod take;
 
 use vortex_error::VortexResult;
-use vortex_scalar::Scalar;
 
 use super::BinaryView;
 use crate::Array;
 use crate::arrays::VarBinViewEncoding;
-use crate::arrays::varbin::varbin_scalar;
 use crate::arrays::varbinview::VarBinViewArray;
-use crate::compute::{ScalarAtFn, TakeFn, UncompressedSizeFn};
+use crate::compute::{TakeFn, UncompressedSizeFn};
 use crate::vtable::ComputeVTable;
 
 impl ComputeVTable for VarBinViewEncoding {
-    fn scalar_at_fn(&self) -> Option<&dyn ScalarAtFn<&dyn Array>> {
-        Some(self)
-    }
-
     fn take_fn(&self) -> Option<&dyn TakeFn<&dyn Array>> {
         Some(self)
     }
 
     fn uncompressed_size_fn(&self) -> Option<&dyn UncompressedSizeFn<&dyn Array>> {
         Some(self)
-    }
-}
-
-impl ScalarAtFn<&VarBinViewArray> for VarBinViewEncoding {
-    fn scalar_at(&self, array: &VarBinViewArray, index: usize) -> VortexResult<Scalar> {
-        Ok(varbin_scalar(array.bytes_at(index), array.dtype()))
     }
 }
 
