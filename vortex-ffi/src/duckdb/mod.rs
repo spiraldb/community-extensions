@@ -45,14 +45,14 @@ pub unsafe extern "C-unwind" fn vx_duckdb_logical_type_to_dtype(
 ) -> *mut DType {
     try_or(error, ptr::null_mut(), || {
         let field_names: Vec<Arc<str>> = (0..column_count)
-            .map(|idx| to_string(*column_names.offset(idx as isize)))
+            .map(|idx| unsafe { to_string(*column_names.offset(idx as isize)) })
             .map(Arc::from)
             .collect();
 
         let types = (0..column_count)
-            .map(|idx| {
+            .map(|idx| unsafe {
                 (
-                    LogicalTypeHandle::new_unowned(unsafe { *column_types.offset(idx as isize) }),
+                    LogicalTypeHandle::new_unowned(*column_types.offset(idx as isize)),
                     *column_nullable.offset(idx as isize) != 0,
                 )
             })
@@ -130,7 +130,7 @@ pub unsafe extern "C-unwind" fn vx_duckdb_chunk_to_array(
             .collect_vec();
 
         let array = ArrayRef::from_duckdb(&NamedDataChunk {
-            chunk: &DataChunkHandle::new_unowned(chunk),
+            chunk: &unsafe { DataChunkHandle::new_unowned(chunk) },
             nullable: Some(&nullable),
             names: Some(struct_type.names().clone()),
         })?;
