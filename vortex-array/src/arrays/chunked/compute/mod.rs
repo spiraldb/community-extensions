@@ -1,6 +1,3 @@
-use crate::arrays::ChunkedEncoding;
-use crate::vtable::ComputeVTable;
-
 mod cast;
 mod compare;
 mod elementwise;
@@ -13,5 +10,3 @@ mod mask;
 mod min_max;
 mod sum;
 mod take;
-
-impl ComputeVTable for ChunkedEncoding {}

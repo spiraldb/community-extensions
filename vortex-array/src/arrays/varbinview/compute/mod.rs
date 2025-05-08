@@ -5,11 +5,6 @@ mod mask;
 mod min_max;
 mod take;
 
-use crate::arrays::VarBinViewEncoding;
-use crate::vtable::ComputeVTable;
-
-impl ComputeVTable for VarBinViewEncoding {}
-
 #[cfg(test)]
 mod tests {
     use vortex_buffer::buffer;
