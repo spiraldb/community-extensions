@@ -1,17 +1,17 @@
 use vortex_buffer::Buffer;
 use vortex_dtype::DecimalDType;
 use vortex_error::VortexResult;
-use vortex_scalar::Scalar;
+use vortex_scalar::{NativeDecimalType, Scalar, match_each_decimal_value_type};
 
-use crate::arrays::{DecimalArray, NativeDecimalType};
+use crate::arrays::DecimalArray;
 use crate::validity::Validity;
-use crate::{Array, ArrayOperationsImpl, ArrayRef, match_each_decimal_value_type};
+use crate::{Array, ArrayOperationsImpl, ArrayRef};
 
 impl ArrayOperationsImpl for DecimalArray {
     fn _slice(&self, start: usize, stop: usize) -> VortexResult<ArrayRef> {
-        match_each_decimal_value_type!(self.values_type, |$S| {
+        match_each_decimal_value_type!(self.values_type, |$D| {
             slice_typed(
-                self.buffer::<$S>(),
+                self.buffer::<$D>(),
                 start,
                 stop,
                 self.decimal_dtype(),
