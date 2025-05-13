@@ -1,11 +1,11 @@
 use vortex_array::arrays::ConstantArray;
 use vortex_array::compute::{TakeKernel, TakeKernelAdapter};
-use vortex_array::{Array, ArrayRef, register_kernel};
+use vortex_array::{Array, ArrayRef, IntoArray, register_kernel};
 use vortex_error::VortexResult;
 
-use crate::{SparseArray, SparseEncoding};
+use crate::{SparseArray, SparseVTable};
 
-impl TakeKernel for SparseEncoding {
+impl TakeKernel for SparseVTable {
     fn take(&self, array: &SparseArray, take_indices: &dyn Array) -> VortexResult<ArrayRef> {
         let Some(new_patches) = array.patches().take(take_indices)? else {
             let result_nullability =
@@ -28,18 +28,18 @@ impl TakeKernel for SparseEncoding {
     }
 }
 
-register_kernel!(TakeKernelAdapter(SparseEncoding).lift());
+register_kernel!(TakeKernelAdapter(SparseVTable).lift());
 
 #[cfg(test)]
 mod test {
     use vortex_array::arrays::PrimitiveArray;
     use vortex_array::compute::take;
     use vortex_array::validity::Validity;
-    use vortex_array::{Array, ArrayRef, IntoArray, ToCanonical};
+    use vortex_array::{Array, ArrayExt, ArrayRef, IntoArray, ToCanonical};
     use vortex_buffer::buffer;
     use vortex_scalar::Scalar;
 
-    use crate::SparseArray;
+    use crate::{SparseArray, SparseVTable};
 
     fn test_array_fill_value() -> Scalar {
         // making this const is annoying
@@ -88,8 +88,9 @@ mod test {
     #[test]
     fn ordered_take() {
         let sparse = sparse_array();
-        let taken =
-            SparseArray::try_from(take(&sparse, &buffer![69, 37].into_array()).unwrap()).unwrap();
+        let taken_arr = take(&sparse, &buffer![69, 37].into_array()).unwrap();
+        let taken = taken_arr.as_::<SparseVTable>();
+
         assert_eq!(
             taken
                 .patches()
