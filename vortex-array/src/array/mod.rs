@@ -11,7 +11,7 @@ pub use statistics::*;
 pub use visitor::*;
 use vortex_buffer::ByteBuffer;
 use vortex_dtype::DType;
-use vortex_error::{VortexExpect, VortexResult, vortex_bail, vortex_err};
+use vortex_error::{VortexExpect, VortexResult, vortex_bail};
 use vortex_mask::Mask;
 use vortex_scalar::Scalar;
 
@@ -623,19 +623,14 @@ impl<V: VTable> ArrayVisitor for ArrayAdapter<V> {
     }
 
     fn metadata(&self) -> VortexResult<Option<Vec<u8>>> {
-        let metadata = <V::SerdeVTable as SerdeVTable<V>>::metadata(&self.0).ok_or_else(|| {
-            vortex_err!(
-                "Array {} does not support serialization",
-                self.encoding_id()
-            )
-        })?;
-        Ok(metadata.serialize())
+        Ok(<V::SerdeVTable as SerdeVTable<V>>::metadata(&self.0)?.map(|m| m.serialize()))
     }
 
     fn metadata_fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match <V::SerdeVTable as SerdeVTable<V>>::metadata(&self.0) {
-            None => write!(f, "<serde not supported>"),
-            Some(metadata) => Debug::fmt(&metadata, f),
+            Err(e) => write!(f, "<serde error: {}>", e),
+            Ok(None) => write!(f, "<serde not supported>"),
+            Ok(Some(metadata)) => Debug::fmt(&metadata, f),
         }
     }
 }
