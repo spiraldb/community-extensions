@@ -1,5 +1,8 @@
 name: "SQL-related benchmarks"
 
+env:
+  DUCKDB_VERSION: v1.2.2
+
 on:
   workflow_call:
     inputs:
@@ -8,7 +11,43 @@ on:
         type: string
 
 jobs:
+  build-duckdb:
+    runs-on:
+      - runs-on=${{ github.run_id }}
+      - family=c6id.8xlarge
+      - image=ubuntu24-full-x64
+      - spot=false
+      - tag=${{ matrix.id }}
+    steps:
+      - uses: runs-on/action@v1
+      - name: Cache duckdb compiled binary
+        uses: runs-on/cache@v4
+        id: cache-duckdb-binary
+        with:
+          key: "${{ runner.os }}-duckdb-linux_amd64-${{ env.DUCKDB_VERSION }}"
+          path: ${{ github.workspace }}/duckdb/build/release/duckdb
+
+      - name: Install duckdb compile requirements
+        if: steps.cache-duckdb-binary.outputs.cache-hit != 'true'
+        run: sudo apt-get update && sudo apt-get install ninja-build cmake build-essential make ccache clang -y
+
+      - name: Build duckdb binary
+        if: steps.cache-duckdb-binary.outputs.cache-hit != 'true'
+        env:
+          CC: clang
+          CXX: clang++
+          GEN: ninja
+          NATIVE_ARCH: 1
+          DUCKDB_PLATFORM: linux_amd64
+          LTO: thin
+        run: |
+          git clone https://github.com/duckdb/duckdb
+          cd duckdb
+          git checkout "$DUCKDB_VERSION"
+          make release
+
   bench:
+    needs: build-duckdb
     # S3 is shared state here, and we want to make sure only one of each job runs at a time
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref_name }}-${{matrix.id}}
@@ -33,8 +72,8 @@ jobs:
             binary_name: tpch
             name: TPC-H on S3
             local_dir: bench-vortex/data/tpch/1
-            remote_storage: s3://vortex-bench-dev-eu/${{github.ref_name}}/tpch-sf1/
-            targets: "datafusion:parquet,datafusion:vortex"
+            remote_storage: s3://vortex-bench-dev-eu/${{github.ref_name}}/tpch/1/
+            targets: "datafusion:parquet,datafusion:vortex,duckdb:parquet,duckdb:vortex"
     runs-on:
       - runs-on=${{ github.run_id }}
       - family=c6id.8xlarge
@@ -55,6 +94,21 @@ jobs:
         with:
           submodules: "recursive"
 
+      - name: Cache duckdb compiled binary
+        uses: runs-on/cache@v4
+        id: cache-duckdb-binary
+        with:
+          fail-on-cache-miss: true
+          key: "${{ runner.os }}-duckdb-linux_amd64-${{ env.DUCKDB_VERSION }}"
+          path: ${{ github.workspace }}/duckdb/build/release/duckdb
+
+      - name: Add duckdb to path
+        run: |
+          echo "${{ github.workspace }}/duckdb/build/release/" >> $GITHUB_PATH
+
+      - name: Verify duckdb available
+        run: duckdb --version
+
       - name: Setup AWS CLI
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -68,17 +122,16 @@ jobs:
         run: |
           cargo build --bin ${{ matrix.binary_name }} --package bench-vortex --profile release_debug
 
-      - name: Install Ninja
-        run: sudo apt-get update && sudo apt-get install -y ninja-build
-
-      - name: Install gzip
-        run: sudo apt-get update && sudo apt-get install -y gzip
+      - name: Install ninja & gzip
+        run: sudo apt-get update && sudo apt-get install -y ninja-build gzip
 
       - name: DuckDB extension build
         env:
           # Build DuckDB and the Vortex extension with `-march=native`.
           # The `NATIVE_ARCH` environment variable is picked up by `duckdb/Makefile`.
           NATIVE_ARCH: 1
+          DUCKDB_PLATFORM: linux_amd64
+          CFLAGS: -ftls-model=global-dynamic
         run: GEN=ninja make release
         working-directory: ${{ github.workspace }}/duckdb-vortex
 
@@ -86,9 +139,9 @@ jobs:
         shell: bash
         run: |
           # Generate data, running each query once to make sure they don't panic.
-          target/release_debug/${{ matrix.binary_name }} --targets datafusion:parquet -i1 -d gh-json
-          target/release_debug/${{ matrix.binary_name }} --targets datafusion:vortex -i1 -d gh-json
-          target/release_debug/${{ matrix.binary_name }} --targets duckdb:vortex -i1 -d gh-json
+          RUST_BACKTRACE=1 target/release_debug/${{ matrix.binary_name }} --targets datafusion:parquet -i1 -d gh-json --skip-rebuild
+          RUST_BACKTRACE=1 target/release_debug/${{ matrix.binary_name }} --targets datafusion:vortex -i1 -d gh-json --skip-rebuild
+          RUST_BACKTRACE=1 target/release_debug/${{ matrix.binary_name }} --targets duckdb:vortex -i1 -d gh-json --skip-rebuild
 
       - name: Upload data
         if: matrix.remote_storage != null
@@ -120,6 +173,7 @@ jobs:
             -d gh-json \
             --targets ${{ matrix.targets }} \
             --export-spans \
+            --skip-rebuild \
           | tee results.json
 
       - name: Run ${{ matrix.name }} benchmark (remote)
@@ -137,6 +191,7 @@ jobs:
               --use-remote-data-dir ${{ matrix.remote_storage }} \
               --targets ${{ matrix.targets }} \
               --export-spans \
+              --skip-rebuild \
               -d gh-json \
             | tee results.json
 

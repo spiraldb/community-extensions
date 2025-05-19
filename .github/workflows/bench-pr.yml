@@ -1,5 +1,8 @@
 name: PR Benchmarks
 
+env:
+  DUCKDB_VERSION: v1.2.2
+
 on:
   pull_request:
     types: [ labeled, synchronize ]
@@ -22,8 +25,44 @@ jobs:
         with:
           labels: benchmark
 
-  bench:
+  build-duckdb:
     needs: label_trigger
+    runs-on:
+      - runs-on=${{ github.run_id }}
+      - family=c6id.8xlarge
+      - image=ubuntu24-full-x64
+      - spot=false
+      - tag=${{ matrix.id }}
+    steps:
+      - uses: runs-on/action@v1
+      - name: Cache duckdb compiled binary
+        uses: runs-on/cache@v4
+        id: cache-duckdb-binary
+        with:
+          key: "${{ runner.os }}-duckdb-linux_amd64-${{ env.DUCKDB_VERSION }}"
+          path: ${{ github.workspace }}/duckdb/build/release/duckdb
+
+      - name: Install duckdb compile requirements
+        if: steps.cache-duckdb-binary.outputs.cache-hit != 'true'
+        run: sudo apt-get update && sudo apt-get install ninja-build cmake build-essential make ccache clang -y
+
+      - name: Build duckdb binary
+        if: steps.cache-duckdb-binary.outputs.cache-hit != 'true'
+        env:
+          CC: clang
+          CXX: clang++
+          GEN: ninja
+          NATIVE_ARCH: 1
+          DUCKDB_PLATFORM: linux_amd64
+          LTO: thin
+        run: |
+          git clone https://github.com/duckdb/duckdb
+          cd duckdb
+          git checkout "$DUCKDB_VERSION"
+          make release
+
+  bench:
+    needs: build-duckdb
     runs-on:
       - runs-on=${{ github.run_id }}
       - family=c6id.8xlarge
@@ -46,15 +85,18 @@ jobs:
           submodules: "recursive"
       # rustup is pre-installed on the ubuntu24-full-x64 image.
 
-      # The compression benchmarks rely on DuckDB being installed to convert CSV to Parquet
-      - name: Install DuckDB
-        uses: opt-nc/setup-duckdb-action@v1.0.12
+      - name: Cache duckdb compiled binary
+        uses: runs-on/cache@v4
+        id: cache-duckdb-binary
         with:
-          version: v1.2.2
+          # This should always be true so fail here, then we can figure out why the cache was empty.
+          fail-on-cache-miss: true
+          key: "${{ runner.os }}-duckdb-linux_amd64-${{ env.DUCKDB_VERSION }}"
+          path: ${{ github.workspace }}/duckdb/build/release/duckdb
 
-      # TODO(joe): remove ninja once duckdb is not built by the benchmark
-      - name: Install gzip
-        run: sudo apt-get update && sudo apt-get install -y gzip ninja-build
+      - name: Add duckdb to path
+        run: |
+          echo "${{ github.workspace }}/duckdb/build/release/" >> $GITHUB_PATH
 
       - name: Build binary
         shell: bash
@@ -73,7 +115,7 @@ jobs:
       - name: Run ${{ matrix.benchmark.name }} benchmark
         shell: bash
         run: |
-          target/release_debug/${{ matrix.benchmark.id }} -d gh-json | tee ${{ matrix.benchmark.id }}.json
+          target/release_debug/${{ matrix.benchmark.id }} -d gh-json --skip-rebuild | tee ${{ matrix.benchmark.id }}.json
 
       - name: Setup AWS CLI
         uses: aws-actions/configure-aws-credentials@v4
