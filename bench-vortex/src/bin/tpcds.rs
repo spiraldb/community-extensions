@@ -50,9 +50,8 @@ struct Args {
     export_spans: bool,
     #[arg(long, default_value_t = false)]
     emit_plan: bool,
-    // Don't try to rebuild duckdb
     #[arg(long)]
-    skip_rebuild: bool,
+    skip_duckdb_build: bool,
 }
 
 #[allow(clippy::expect_used)]
@@ -96,8 +95,8 @@ fn main() -> anyhow::Result<()> {
         .unique()
         .collect_vec();
 
-    let duckdb_resolved_path = ddb::get_executable_path(&args.duckdb_path);
-    if args.duckdb_path.is_none() && !args.skip_rebuild {
+    let duckdb_resolved_path = ddb::duckdb_executable_path(&args.duckdb_path);
+    if args.duckdb_path.is_none() && !args.skip_duckdb_build {
         ddb::build_vortex_duckdb();
     }
 

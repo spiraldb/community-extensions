@@ -71,9 +71,8 @@ struct Args {
     hide_progress_bar: bool,
     #[arg(long, default_value_t = false)]
     show_metrics: bool,
-    // Don't try to rebuild duckdb
     #[arg(long)]
-    skip_rebuild: bool,
+    skip_duckdb_build: bool,
 }
 
 struct DataFusionCtx {
@@ -212,9 +211,9 @@ fn main() -> anyhow::Result<()> {
         .iter()
         .any(|t| t.engine() == Engine::DuckDB)
         .then(|| {
-            let path = ddb::get_executable_path(&args.duckdb_path);
+            let path = ddb::duckdb_executable_path(&args.duckdb_path);
             // If the path is to the duckdb-vortex extension, try to rebuild
-            if args.duckdb_path.is_none() && !args.skip_rebuild {
+            if args.duckdb_path.is_none() && !args.skip_duckdb_build {
                 ddb::build_vortex_duckdb();
             }
             path
