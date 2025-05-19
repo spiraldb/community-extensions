@@ -1,14 +1,14 @@
 use vortex_array::{VTableContext, VTableRegistry};
 
-use crate::layouts::chunked::ChunkedLayout;
-use crate::layouts::dict::DictLayout;
-use crate::layouts::flat::FlatLayout;
-use crate::layouts::stats::StatsLayout;
-use crate::layouts::struct_::StructLayout;
-use crate::vtable::LayoutVTableRef;
+use crate::LayoutEncodingRef;
+use crate::layouts::chunked::ChunkedLayoutEncoding;
+use crate::layouts::dict::DictLayoutEncoding;
+use crate::layouts::flat::FlatLayoutEncoding;
+use crate::layouts::struct_::StructLayoutEncoding;
+use crate::layouts::zoned::ZonedLayoutEncoding;
 
-pub type LayoutContext = VTableContext<LayoutVTableRef>;
-pub type LayoutRegistry = VTableRegistry<LayoutVTableRef>;
+pub type LayoutContext = VTableContext<LayoutEncodingRef>;
+pub type LayoutRegistry = VTableRegistry<LayoutEncodingRef>;
 
 pub trait LayoutRegistryExt {
     fn default() -> Self;
@@ -18,11 +18,11 @@ impl LayoutRegistryExt for LayoutRegistry {
     fn default() -> Self {
         let mut this = Self::empty();
         this.register_many([
-            LayoutVTableRef::new_ref(&ChunkedLayout),
-            LayoutVTableRef::new_ref(&FlatLayout),
-            LayoutVTableRef::new_ref(&StructLayout),
-            LayoutVTableRef::new_ref(&StatsLayout),
-            LayoutVTableRef::new_ref(&DictLayout),
+            LayoutEncodingRef::new_ref(ChunkedLayoutEncoding.as_ref()),
+            LayoutEncodingRef::new_ref(FlatLayoutEncoding.as_ref()),
+            LayoutEncodingRef::new_ref(StructLayoutEncoding.as_ref()),
+            LayoutEncodingRef::new_ref(ZonedLayoutEncoding.as_ref()),
+            LayoutEncodingRef::new_ref(DictLayoutEncoding.as_ref()),
         ]);
         this
     }

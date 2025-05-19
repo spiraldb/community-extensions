@@ -6,9 +6,9 @@ use vortex_array::{Array, ArrayRef, ToCanonical};
 use vortex_dtype::DType;
 use vortex_error::{VortexExpect, VortexResult};
 
-use crate::layouts::stats::stats_table::StatsAccumulator;
+use crate::layouts::zoned::zone_map::StatsAccumulator;
 use crate::segments::SegmentWriter;
-use crate::{Layout, LayoutWriter};
+use crate::{LayoutRef, LayoutWriter};
 
 /// A layout writer that computes aggregate statistics for all fields.
 ///
@@ -78,7 +78,7 @@ impl LayoutWriter for FileStatsLayoutWriter {
         self.inner.flush(segment_writer)
     }
 
-    fn finish(&mut self, segment_writer: &mut dyn SegmentWriter) -> VortexResult<Layout> {
+    fn finish(&mut self, segment_writer: &mut dyn SegmentWriter) -> VortexResult<LayoutRef> {
         self.inner.finish(segment_writer)
     }
 }

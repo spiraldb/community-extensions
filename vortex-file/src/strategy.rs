@@ -17,10 +17,10 @@ use vortex_layout::layouts::flat::writer::FlatLayoutStrategy;
 use vortex_layout::layouts::repartition::{
     RepartitionStrategy, RepartitionWriter, RepartitionWriterOptions,
 };
-use vortex_layout::layouts::stats::writer::{StatsLayoutOptions, StatsLayoutWriter};
 use vortex_layout::layouts::struct_::writer::StructLayoutWriter;
+use vortex_layout::layouts::zoned::writer::{ZonedLayoutOptions, ZonedLayoutWriter};
 use vortex_layout::segments::SegmentWriter;
-use vortex_layout::{Layout, LayoutStrategy, LayoutWriter, LayoutWriterExt};
+use vortex_layout::{LayoutRef, LayoutStrategy, LayoutWriter, LayoutWriterExt};
 use vortex_scalar::Scalar;
 
 const ROW_BLOCK_SIZE: usize = 8192;
@@ -70,15 +70,15 @@ impl LayoutStrategy for VortexLayoutStrategy {
 
         let writer = dict_strategy.new_writer(ctx, dtype)?;
 
-        // Prior to repartitioning, we record statistics
-        let stats_writer = StatsLayoutWriter::new(
+        // Prior to repartitioning, we create a zone map
+        let zoned_writer = ZonedLayoutWriter::new(
             ctx.clone(),
             dtype,
             writer,
             ArcRef::new_arc(Arc::new(BtrBlocksCompressedStrategy {
                 child: ArcRef::new_arc(Arc::new(FlatLayoutStrategy::default())),
             })),
-            StatsLayoutOptions {
+            ZonedLayoutOptions {
                 block_size: ROW_BLOCK_SIZE,
                 stats: PRUNING_STATS.into(),
             },
@@ -87,7 +87,7 @@ impl LayoutStrategy for VortexLayoutStrategy {
 
         let writer = RepartitionWriter::new(
             dtype.clone(),
-            stats_writer,
+            zoned_writer,
             RepartitionWriterOptions {
                 // No minimum block size in bytes
                 block_size_minimum: 0,
@@ -211,7 +211,7 @@ impl LayoutWriter for BtrBlocksCompressedWriter {
         self.child.flush(segment_writer)
     }
 
-    fn finish(&mut self, segment_writer: &mut dyn SegmentWriter) -> VortexResult<Layout> {
+    fn finish(&mut self, segment_writer: &mut dyn SegmentWriter) -> VortexResult<LayoutRef> {
         self.child.finish(segment_writer)
     }
 }
@@ -271,7 +271,7 @@ impl LayoutWriter for BufferedWriter {
         self.child.flush(segment_writer)
     }
 
-    fn finish(&mut self, segment_writer: &mut dyn SegmentWriter) -> VortexResult<Layout> {
+    fn finish(&mut self, segment_writer: &mut dyn SegmentWriter) -> VortexResult<LayoutRef> {
         self.child.finish(segment_writer)
     }
 }

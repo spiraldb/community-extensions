@@ -23,15 +23,15 @@ use vortex_array::stats::StatsSet;
 use vortex_array::{ArrayContext, ArrayRegistry};
 use vortex_dtype::DType;
 use vortex_error::{VortexResult, vortex_bail, vortex_err};
-use vortex_flatbuffers::{FlatBuffer, footer as fb, layout as fbl};
-use vortex_layout::{Layout, LayoutContext, LayoutRegistry};
+use vortex_flatbuffers::{FlatBuffer, footer as fb};
+use vortex_layout::{LayoutContext, LayoutRef, LayoutRegistry, layout_from_flatbuffer};
 
 /// Captures the layout information of a Vortex file.
 #[derive(Debug, Clone)]
 pub struct Footer {
     array_ctx: ArrayContext,
     layout_ctx: LayoutContext,
-    root_layout: Layout,
+    root_layout: LayoutRef,
     segments: Arc<[SegmentSpec]>,
     statistics: Option<FileStatistics>,
 }
@@ -47,7 +47,6 @@ impl Footer {
         layout_registry: &LayoutRegistry,
     ) -> VortexResult<Self> {
         let fb_footer = root::<fb::Footer>(&footer_bytes)?;
-        let fb_layout = root::<fbl::Layout>(&layout_bytes)?;
 
         // Create a LayoutContext from the registry.
         let layout_specs = fb_footer.layout_specs();
@@ -65,27 +64,7 @@ impl Footer {
             .map(|encoding| encoding.id());
         let array_ctx = array_registry.new_context(array_ids)?;
 
-        let root_encoding = layout_ctx
-            .lookup_encoding(fb_layout.encoding())
-            .ok_or_else(|| {
-                vortex_err!(
-                    "Footer root layout encoding {} not found",
-                    fb_layout.encoding()
-                )
-            })?
-            .clone();
-
-        // SAFETY: We have validated the fb_root_layout at the beginning of this function
-        let root_layout = unsafe {
-            Layout::new_viewed_unchecked(
-                "".into(),
-                root_encoding,
-                dtype,
-                layout_bytes.clone(),
-                fb_layout._tab.loc(),
-                layout_ctx.clone(),
-            )
-        };
+        let root_layout = layout_from_flatbuffer(layout_bytes, &dtype, &layout_ctx)?;
 
         let segments: Arc<[SegmentSpec]> = fb_footer
             .segment_specs()
@@ -118,8 +97,8 @@ impl Footer {
         &self.layout_ctx
     }
 
-    /// Returns the root [`Layout`] of the file.
-    pub fn layout(&self) -> &Layout {
+    /// Returns the root [`LayoutRef`] of the file.
+    pub fn layout(&self) -> &LayoutRef {
         &self.root_layout
     }
 

@@ -1,62 +1,29 @@
-use std::ops::Range;
-use std::sync::Arc;
+use std::ops::{Deref, Range};
+use std::sync::{Arc, OnceLock};
 
 use async_trait::async_trait;
 use futures::FutureExt;
 use futures::future::{BoxFuture, Shared};
-use vortex_array::ArrayRef;
+use vortex_array::{ArrayContext, ArrayRef};
 use vortex_dtype::DType;
-use vortex_error::{SharedVortexResult, VortexError, VortexResult};
+use vortex_error::{SharedVortexResult, VortexError, VortexResult, vortex_bail};
 use vortex_expr::ExprRef;
 use vortex_mask::Mask;
 
 use crate::Layout;
+use crate::children::LayoutChildren;
+use crate::segments::SegmentSource;
 
-/// A [`LayoutReader`] is an instance of a [`Layout`] that can cache state across multiple
-/// operations.
+pub type LayoutReaderRef = Arc<dyn LayoutReader>;
+
+/// A [`LayoutReader`] is used to read a [`Layout`] in a way that can cache state across multiple
+/// evaluation operations.
 ///
-/// Since different row ranges of the reader may be evaluated by different threads, it is required
-/// to be both `Send` and `Sync`.
-pub trait LayoutReader: 'static + ExprEvaluator {
-    /// Returns the [`Layout`] of this reader.
-    fn layout(&self) -> &Layout;
+/// It dereferences into the underlying layout being read.
+pub trait LayoutReader: 'static + Send + Sync + Deref<Target = dyn Layout> {
+    /// Returns the name of the layout reader for debugging.
+    fn name(&self) -> &Arc<str>;
 
-    /// Returns the row count of the layout.
-    fn row_count(&self) -> u64 {
-        self.layout().row_count()
-    }
-
-    /// Returns the DType of the layout.
-    fn dtype(&self) -> &DType {
-        self.layout().dtype()
-    }
-
-    fn children(&self) -> VortexResult<Vec<Arc<dyn LayoutReader>>>;
-}
-
-pub trait LayoutReaderExt: LayoutReader {
-    /// Box the layout scan.
-    fn into_arc(self) -> Arc<dyn LayoutReader>
-    where
-        Self: Sized + 'static,
-    {
-        Arc::new(self) as _
-    }
-}
-
-impl<L: LayoutReader> LayoutReaderExt for L {}
-
-pub type MaskFuture = Shared<BoxFuture<'static, SharedVortexResult<Mask>>>;
-
-/// Create a resolved [`MaskFuture`] from a [`Mask`].
-pub fn mask_future_ready(mask: Mask) -> MaskFuture {
-    async move { Ok::<_, Arc<VortexError>>(mask) }
-        .boxed()
-        .shared()
-}
-
-/// A trait for evaluating expressions against a [`LayoutReader`].
-pub trait ExprEvaluator: Send + Sync {
     /// Performs an approximate evaluation of the expression against the layout reader.
     fn pruning_evaluation(
         &self,
@@ -79,30 +46,13 @@ pub trait ExprEvaluator: Send + Sync {
     ) -> VortexResult<Box<dyn ArrayEvaluation>>;
 }
 
-impl ExprEvaluator for Arc<dyn LayoutReader> {
-    fn pruning_evaluation(
-        &self,
-        row_range: &Range<u64>,
-        expr: &ExprRef,
-    ) -> VortexResult<Box<dyn PruningEvaluation>> {
-        self.as_ref().pruning_evaluation(row_range, expr)
-    }
+pub type MaskFuture = Shared<BoxFuture<'static, SharedVortexResult<Mask>>>;
 
-    fn filter_evaluation(
-        &self,
-        row_range: &Range<u64>,
-        expr: &ExprRef,
-    ) -> VortexResult<Box<dyn MaskEvaluation>> {
-        self.as_ref().filter_evaluation(row_range, expr)
-    }
-
-    fn projection_evaluation(
-        &self,
-        row_range: &Range<u64>,
-        expr: &ExprRef,
-    ) -> VortexResult<Box<dyn ArrayEvaluation>> {
-        self.as_ref().projection_evaluation(row_range, expr)
-    }
+/// Create a resolved [`MaskFuture`] from a [`Mask`].
+pub fn mask_future_ready(mask: Mask) -> MaskFuture {
+    async move { Ok::<_, Arc<VortexError>>(mask) }
+        .boxed()
+        .shared()
 }
 
 #[async_trait]
@@ -130,4 +80,45 @@ pub trait MaskEvaluation: 'static + Send + Sync {
 #[async_trait]
 pub trait ArrayEvaluation: 'static + Send + Sync {
     async fn invoke(&self, mask: Mask) -> VortexResult<ArrayRef>;
+}
+
+pub struct LazyReaderChildren {
+    children: Arc<dyn LayoutChildren>,
+    segment_source: Arc<dyn SegmentSource>,
+    ctx: ArrayContext,
+
+    // TODO(ngates): we may want a hash map of some sort here?
+    cache: Vec<OnceLock<LayoutReaderRef>>,
+}
+
+impl LazyReaderChildren {
+    pub fn new(
+        children: Arc<dyn LayoutChildren>,
+        segment_source: Arc<dyn SegmentSource>,
+        ctx: ArrayContext,
+    ) -> Self {
+        let nchildren = children.nchildren();
+        let cache = (0..nchildren).map(|_| OnceLock::new()).collect::<Vec<_>>();
+        Self {
+            children,
+            segment_source,
+            ctx,
+            cache,
+        }
+    }
+
+    pub fn get(
+        &self,
+        idx: usize,
+        dtype: &DType,
+        name: &Arc<str>,
+    ) -> VortexResult<&LayoutReaderRef> {
+        if idx >= self.cache.len() {
+            vortex_bail!("Child index out of bounds: {} of {}", idx, self.cache.len());
+        }
+        self.cache[idx].get_or_try_init(|| {
+            let child = self.children.child(idx, dtype)?;
+            child.new_reader(name, &self.segment_source, &self.ctx)
+        })
+    }
 }
