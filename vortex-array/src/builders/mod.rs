@@ -49,11 +49,11 @@ use vortex_dtype::{DType, match_each_native_ptype};
 use vortex_error::{VortexResult, vortex_bail, vortex_err};
 use vortex_mask::Mask;
 use vortex_scalar::{
-    BinaryScalar, BoolScalar, ExtScalar, ListScalar, PrimitiveScalar, Scalar, ScalarValue,
-    StructScalar, Utf8Scalar, match_each_decimal_value_type,
+    BinaryScalar, BoolScalar, DecimalValue, ExtScalar, ListScalar, PrimitiveScalar, Scalar,
+    ScalarValue, StructScalar, Utf8Scalar, match_each_decimal_value, match_each_decimal_value_type,
 };
 
-use crate::arrays::precision_to_storage_size;
+use crate::arrays::smallest_storage_type;
 use crate::{Array, ArrayRef};
 
 pub trait ArrayBuilder: Send {
@@ -100,7 +100,7 @@ pub trait ArrayBuilder: Send {
     ///
     /// This function may panic if the builder's methods are called with invalid arguments. If only
     /// the methods on this interface are used, the builder should not panic. However, specific
-    /// builders have interfaces that may be misued. For example, if the number of values in a
+    /// builders have interfaces that may be misused. For example, if the number of values in a
     /// [PrimitiveBuilder]'s [vortex_buffer::BufferMut] does not match the number of validity bits,
     /// the PrimitiveBuilder's [Self::finish] will panic.
     fn finish(&mut self) -> ArrayRef;
@@ -140,8 +140,8 @@ pub fn builder_with_capacity(dtype: &DType, capacity: usize) -> Box<dyn ArrayBui
             })
         }
         DType::Decimal(decimal_type, n) => {
-            match_each_decimal_value_type!(precision_to_storage_size(decimal_type), |$D| {
-                Box::new(DecimalBuilder::<$D>::with_capacity(capacity, decimal_type.clone(), *n))
+            match_each_decimal_value_type!(smallest_storage_type(decimal_type), |$D| {
+                Box::new(DecimalBuilder::with_capacity::<$D>(capacity, decimal_type.clone(), *n))
             })
         }
         DType::Utf8(n) => Box::new(VarBinViewBuilder::with_capacity(DType::Utf8(*n), capacity)),
@@ -207,16 +207,20 @@ pub trait ArrayBuilderExt: ArrayBuilder {
                     .append_option(PrimitiveScalar::try_from(scalar)?.typed_value::<$P>())
                 })
             }
-            DType::Decimal(decimal_type, _) => {
-                match_each_decimal_value_type!(precision_to_storage_size(decimal_type), |$D| {
-                self.as_any_mut()
-                    .downcast_mut::<DecimalBuilder<$D>>()
-                    .ok_or_else(|| {
-                        vortex_err!("Cannot append decimal scalar to non-decimal builder")
-                    })?
-                    .append_option(Option::<$D>::try_from(scalar.as_decimal()).unwrap())
-                })
-            }
+            DType::Decimal(..) => match scalar.as_decimal().decimal_value() {
+                None => self.append_null(),
+                Some(v) => match_each_decimal_value!(v, |$value| {
+                    self.as_any_mut()
+                        .downcast_mut::<DecimalBuilder>()
+                        .ok_or_else(|| {
+                            ::vortex_error::vortex_err!(
+                                "Cannot append decimal scalar of type {} to builder of type",
+                                stringify!($ty),
+                            )
+                        })?
+                        .append_value(*$value)
+                }),
+            },
             DType::Utf8(_) => self
                 .as_any_mut()
                 .downcast_mut::<VarBinViewBuilder>()

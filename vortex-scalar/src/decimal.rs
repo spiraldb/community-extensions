@@ -6,7 +6,7 @@ use vortex_dtype::{DType, DecimalDType, Nullability};
 use vortex_error::{VortexError, VortexResult, vortex_bail};
 
 use crate::scalar_value::InnerScalarValue;
-use crate::{Scalar, ScalarValue, i256};
+use crate::{BigCast, Scalar, ScalarValue, i256};
 
 /// Type of the decimal values.
 #[derive(Clone, Copy, Debug, prost::Enumeration, PartialEq, Eq)]
@@ -32,7 +32,22 @@ pub enum DecimalValue {
 }
 
 /// Type of decimal scalar values.
-pub trait NativeDecimalType: Copy + Eq + Ord + Default + Send + Sync + 'static {
+pub trait NativeDecimalType:
+    Copy
+    + Eq
+    + Ord
+    + Default
+    + Send
+    + Sync
+    + BigCast
+    // + AsPrimitive<i8>
+    // + AsPrimitive<i16>
+    // + AsPrimitive<i32>
+    // + AsPrimitive<i64>
+    // + AsPrimitive<i128>
+    // + AsPrimitive<i256>
+    + 'static
+{
     const VALUES_TYPE: DecimalValueType;
 }
 
@@ -207,7 +222,7 @@ macro_rules! decimal_scalar_unpack {
                 Ok(match value.value {
                     None => None,
                     Some(DecimalValue::$arm(v)) => Some(v),
-                    _ => vortex_bail!("Cannot extract decimal as "),
+                    v => vortex_bail!("Cannot extract decimal {:?} as {}", v, stringify!($ty)),
                 })
             }
         }
@@ -219,7 +234,7 @@ macro_rules! decimal_scalar_unpack {
                 match value.value {
                     None => vortex_bail!("Cannot extract value from null decimal"),
                     Some(DecimalValue::$arm(v)) => Ok(v),
-                    _ => vortex_bail!("Cannot extract decimal as "),
+                    v => vortex_bail!("Cannot extract decimal {:?} as {}", v, stringify!($ty)),
                 }
             }
         }
